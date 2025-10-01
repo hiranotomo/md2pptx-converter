@@ -3,8 +3,8 @@
 import { useState, useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
 import {
-  Upload, FileText, Download, Sparkles, Palette,
-  Wand2, FileDown, PlayCircle, AlertCircle, CheckCircle2
+  Upload, FileText, Download, Palette,
+  FileDown, PlayCircle, AlertCircle, CheckCircle2, Sparkles, Zap
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { MdOutlinePreview } from '@/components/md-outline-preview'
+import { PptxIframePreview } from '@/components/pptx-iframe-preview'
 import { optimizeMarkdown, analyzeMarkdown, type MarkdownSuggestion } from '@/lib/markdown-optimizer'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -45,6 +46,7 @@ export function ModernConverter() {
   const [selectedTemplate, setSelectedTemplate] = useState('default')
   const [generatedFiles, setGeneratedFiles] = useState<GeneratedFile[]>([])
   const [showOptimized, setShowOptimized] = useState(false)
+  const [previewFile, setPreviewFile] = useState<GeneratedFile | null>(null)
 
   const loadSampleMarkdown = useCallback(async () => {
     try {
@@ -103,10 +105,8 @@ export function ModernConverter() {
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: {
-      'text/markdown': ['.md', '.markdown'],
-    },
-    maxFiles: 1,
+    accept: { 'text/markdown': ['.md', '.markdown'] },
+    multiple: false,
   })
 
   const handleConvert = async () => {
@@ -114,14 +114,10 @@ export function ModernConverter() {
 
     setConverting(true)
     try {
+      const contentToConvert = showOptimized ? optimizedMarkdown : markdownContent
       const formData = new FormData()
-
-      // Use optimized markdown if available
-      const contentToConvert = showOptimized && optimizedMarkdown ? optimizedMarkdown : markdownContent
       const blob = new Blob([contentToConvert], { type: 'text/markdown' })
-      const fileToConvert = new File([blob], file.name, { type: 'text/markdown' })
-
-      formData.append('file', fileToConvert)
+      formData.append('file', blob, file.name)
       formData.append('template', selectedTemplate)
 
       const response = await fetch('/api/convert', {
@@ -133,11 +129,14 @@ export function ModernConverter() {
         throw new Error('Conversion failed')
       }
 
-      const resultBlob = await response.blob()
-      const url = URL.createObjectURL(resultBlob)
+      const arrayBuffer = await response.arrayBuffer()
+      const blob2 = new Blob([arrayBuffer], {
+        type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      })
+      const url = URL.createObjectURL(blob2)
 
-      const template = TEMPLATES.find(t => t.id === selectedTemplate)
-      const filename = file?.name.replace(/\.md$/, `.${selectedTemplate}.pptx`) || `presentation.${selectedTemplate}.pptx`
+      const template = TEMPLATES.find((t) => t.id === selectedTemplate)
+      const filename = `${file.name.replace(/\.md$/, '')}_${selectedTemplate}.pptx`
 
       const newFile = {
         url,
@@ -147,7 +146,8 @@ export function ModernConverter() {
         downloaded: false,
       }
 
-      setGeneratedFiles(prev => [...prev, newFile])
+      setGeneratedFiles((prev) => [...prev, newFile])
+      setPreviewFile(newFile) // Auto-preview the newly generated file
     } catch (error) {
       console.error('Conversion error:', error)
       alert('変換に失敗しました')
@@ -170,343 +170,371 @@ export function ModernConverter() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 relative overflow-hidden">
-      {/* Background decoration */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-400 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-400 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-2000"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-pink-400 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000"></div>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      {/* Hero Section */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0di00aC0ydjRoLTR2Mmg0djRoMnYtNGg0di0yaC00em0wLTMwVjBoLTJ2NGgtNHYyaDR2NGgyVjZoNFY0aC00ek02IDM0di00SDR2NGgwdjJoNHY0aDJ2LTRoNHYtMkg2ek02IDRWMEG0djRIMHYyaDR2NGgyVjZoNFY0SDZ6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-10"></div>
 
-      {/* Hero Header */}
-      <div className="relative bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 text-white py-20 px-4 overflow-hidden">
-        {/* Animated background pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute inset-0" style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-          }}></div>
-        </div>
-
-        <div className="max-w-6xl mx-auto relative z-10">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-3 rounded-2xl bg-white/20 backdrop-blur-sm border border-white/30">
-              <Sparkles className="w-8 h-8" />
+        <div className="max-w-7xl mx-auto px-6 py-16 md:py-24 relative">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="relative">
+              <div className="absolute inset-0 bg-white/30 blur-xl rounded-full"></div>
+              <div className="relative bg-white/20 backdrop-blur-sm p-4 rounded-2xl border border-white/30 shadow-2xl">
+                <Sparkles className="w-8 h-8 text-white" />
+              </div>
             </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">Md2Pptx</h1>
-              <p className="text-sm text-white/80">AI-Powered Presentation Generator</p>
+              <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight">Md2Pptx</h1>
+              <p className="text-blue-100 text-sm md:text-base">次世代プレゼンテーション生成ツール</p>
             </div>
           </div>
 
-          <h2 className="text-5xl md:text-7xl font-black mb-6 leading-tight">
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-white via-white to-white/80">
-              Markdown から
-            </span>
-            <br />
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-yellow-300 to-pink-300">
-              魔法のように
-            </span>
-            <br />
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-white via-white to-white/80">
-              プレゼンを生成
-            </span>
+          <h2 className="text-4xl md:text-6xl font-extrabold text-white mb-6 leading-tight">
+            Markdownから<br />
+            <span className="text-yellow-300">瞬時に</span>美しいプレゼンへ
           </h2>
 
-          <p className="text-xl md:text-2xl text-white/90 mb-8 max-w-3xl leading-relaxed">
-            テキストを貼り付けるだけで、プロフェッショナルな<br />
-            PowerPointプレゼンテーションが完成 ✨
+          <p className="text-xl text-blue-50 mb-10 max-w-2xl leading-relaxed">
+            テキストベースのコンテンツを、プロフェッショナルなPowerPointプレゼンテーションに自動変換。
+            デザインテンプレートを選ぶだけで、洗練されたスライドが完成します。
           </p>
-
-          <div className="flex flex-wrap gap-4">
-            <Button
-              size="lg"
-              onClick={loadSampleMarkdown}
-              className="bg-white text-purple-600 hover:bg-white/90 hover:scale-105 transition-transform gap-2 px-8 py-6 text-lg rounded-xl shadow-2xl"
-            >
-              <PlayCircle className="w-6 h-6" />
-              🎬 デモを試す
-            </Button>
-            {markdownContent && (
-              <Button
-                size="lg"
-                variant="outline"
-                onClick={downloadSampleMarkdown}
-                className="border-2 border-white/30 text-white hover:bg-white/10 backdrop-blur-sm gap-2 px-8 py-6 text-lg rounded-xl"
-              >
-                <FileDown className="w-6 h-6" />
-                サンプルMDをダウンロード
-              </Button>
-            )}
-          </div>
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto p-6 space-y-8 relative z-10">
-        {/* Template Selection */}
-        <Card className="border-0 shadow-2xl bg-white/80 backdrop-blur-lg hover:shadow-3xl transition-all duration-300">
-          <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 border-b">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 text-white">
-                <Palette className="w-6 h-6" />
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-6 py-12 space-y-8">
+        {/* Markdown Input Selection */}
+        <Card className="border-none shadow-2xl bg-white overflow-hidden">
+          <CardHeader className="border-b bg-gradient-to-r from-indigo-600 to-purple-600 text-white pb-6">
+            <div className="flex items-center gap-4">
+              <div className="p-4 rounded-2xl bg-white/20 backdrop-blur-sm border border-white/30 shadow-xl">
+                <FileText className="w-7 h-7 text-white" />
               </div>
               <div>
-                <CardTitle className="text-2xl">
-                  <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent font-black">
-                    STEP 1
-                  </span>
-                  {' '}デザインテンプレートを選択
+                <CardTitle className="text-3xl font-extrabold flex items-center gap-3">
+                  <span className="bg-yellow-300 text-indigo-900 px-3 py-1 rounded-lg text-lg">STEP 1</span>
+                  Markdownを用意
                 </CardTitle>
-                <CardDescription className="text-base">
-                  あなたのブランドに合ったスタイルを選びましょう 🎨
-                </CardDescription>
+                <CardDescription className="text-indigo-100 text-base mt-2">サンプルを使うか、ファイルをアップロードしてください</CardDescription>
               </div>
             </div>
           </CardHeader>
-          <CardContent>
-            <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
-              <SelectTrigger className="w-full h-12">
-                <SelectValue placeholder="テンプレートを選択" />
-              </SelectTrigger>
-              <SelectContent>
-                {TEMPLATES.map((template) => (
-                  <SelectItem key={template.id} value={template.id}>
-                    <div className="flex items-center gap-3 py-1">
-                      <div className="flex gap-1">
-                        {template.colors.slice(0, 2).map((color, i) => (
-                          <div
-                            key={i}
-                            className="w-5 h-5 rounded-full border-2 border-white shadow-sm"
-                            style={{ backgroundColor: color }}
-                          />
-                        ))}
-                      </div>
-                      <span className="font-medium">{template.name}</span>
-                      <Badge variant="secondary" className="text-xs">
-                        {template.category}
-                      </Badge>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </CardContent>
-        </Card>
-
-        {/* File Upload */}
-        <Card className="border-0 shadow-2xl bg-white/80 backdrop-blur-lg hover:shadow-3xl transition-all duration-300">
-          <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-500 text-white">
-                <FileText className="w-6 h-6" />
-              </div>
-              <div>
-                <CardTitle className="text-2xl">
-                  <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent font-black">
-                    STEP 2
-                  </span>
-                  {' '}Markdownファイルをアップロード
-                </CardTitle>
-                <CardDescription className="text-base">
-                  ドラッグ&ドロップで簡単アップロード 📄
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div
-              {...getRootProps()}
-              className={`
-                border-3 border-dashed rounded-xl p-12
-                transition-all cursor-pointer
-                ${isDragActive
-                  ? 'border-blue-500 bg-blue-50 scale-[1.02]'
-                  : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
-                }
-              `}
-            >
-              <input {...getInputProps()} />
-              <div className="flex flex-col items-center gap-4 text-center">
-                <div className={`
-                  p-4 rounded-full
-                  ${isDragActive ? 'bg-blue-100' : 'bg-gray-100'}
-                `}>
-                  <Upload className={`
-                    w-10 h-10
-                    ${isDragActive ? 'text-blue-600' : 'text-gray-600'}
-                  `} />
-                </div>
-                {file ? (
-                  <div className="space-y-2">
-                    <CheckCircle2 className="w-8 h-8 text-green-600 mx-auto" />
-                    <p className="font-semibold text-lg">{file.name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {(file.size / 1024).toFixed(2)} KB
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <p className="font-medium text-lg">
-                      {isDragActive
-                        ? 'ここにドロップしてください'
-                        : 'ファイルをドラッグ&ドロップ'}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      または クリックして選択
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Suggestions */}
-        {suggestions.length > 0 && (
-          <Card className="border-2 border-yellow-200 bg-yellow-50">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-yellow-900">
-                <Wand2 className="w-5 h-5" />
-                最適化の提案
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {suggestions.map((suggestion, index) => (
-                <div key={index} className="flex items-start gap-2">
-                  <AlertCircle className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
-                    suggestion.type === 'error' ? 'text-red-600' :
-                    suggestion.type === 'warning' ? 'text-yellow-600' :
-                    'text-blue-600'
-                  }`} />
-                  <p className="text-sm">{suggestion.message}</p>
-                </div>
-              ))}
-              <Button
-                onClick={() => setShowOptimized(!showOptimized)}
-                variant={showOptimized ? 'default' : 'outline'}
-                size="sm"
-                className="mt-2"
+          <CardContent className="pt-6 pb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Sample Markdown Option */}
+              <button
+                onClick={loadSampleMarkdown}
+                className={`group relative overflow-hidden rounded-2xl border-2 transition-all duration-300 p-8 text-left ${
+                  file?.name === 'sample.md'
+                    ? 'border-blue-600 bg-blue-50 shadow-xl ring-4 ring-blue-200'
+                    : 'border-slate-300 hover:border-blue-400 hover:shadow-lg bg-white'
+                }`}
               >
-                {showOptimized ? '元のMarkdownを使用' : '最適化されたMarkdownを使用'}
-              </Button>
+                <div className="flex items-start gap-4">
+                  <div className={`p-4 rounded-xl transition-all ${
+                    file?.name === 'sample.md' ? 'bg-blue-100' : 'bg-slate-100 group-hover:bg-blue-100'
+                  }`}>
+                    <PlayCircle className={`w-8 h-8 ${
+                      file?.name === 'sample.md' ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500'
+                    }`} />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-xl font-bold text-slate-900 mb-2">サンプルを使う</h3>
+                    <p className="text-sm text-slate-600">
+                      すぐに試せるサンプルMarkdownを読み込みます
+                    </p>
+                    {file?.name === 'sample.md' && (
+                      <Badge className="mt-3 bg-blue-100 text-blue-700 hover:bg-blue-100">
+                        <CheckCircle2 className="w-3 h-3 mr-1" />
+                        読み込み済み
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </button>
+
+              {/* File Upload Option */}
+              <div
+                {...getRootProps()}
+                className={`group relative overflow-hidden rounded-2xl border-2 border-dashed cursor-pointer transition-all duration-300 p-8 ${
+                  isDragActive
+                    ? 'border-blue-500 bg-blue-50 shadow-inner'
+                    : file && file.name !== 'sample.md'
+                    ? 'border-green-400 bg-green-50/50 shadow-xl ring-4 ring-green-200'
+                    : 'border-slate-300 hover:border-blue-400 hover:shadow-lg bg-white'
+                }`}
+              >
+                <input {...getInputProps()} />
+                <div className="flex items-start gap-4">
+                  <div className={`p-4 rounded-xl transition-all ${
+                    file && file.name !== 'sample.md' ? 'bg-green-100' : 'bg-slate-100 group-hover:bg-blue-100'
+                  }`}>
+                    <Upload className={`w-8 h-8 ${
+                      file && file.name !== 'sample.md' ? 'text-green-600' : 'text-slate-400 group-hover:text-blue-500'
+                    }`} />
+                  </div>
+                  <div className="flex-1">
+                    {file && file.name !== 'sample.md' ? (
+                      <>
+                        <h3 className="text-xl font-bold text-slate-900 mb-1">{file.name}</h3>
+                        <p className="text-sm text-slate-600 mb-3">
+                          {(file.size / 1024).toFixed(2)} KB
+                        </p>
+                        <Badge className="bg-green-100 text-green-700 hover:bg-green-100">
+                          <CheckCircle2 className="w-3 h-3 mr-1" />
+                          アップロード完了
+                        </Badge>
+                      </>
+                    ) : (
+                      <>
+                        <h3 className="text-xl font-bold text-slate-900 mb-2">ファイルをアップロード</h3>
+                        <p className="text-sm text-slate-600">
+                          {isDragActive
+                            ? 'ここにドロップしてください'
+                            : 'Markdownファイルをドラッグ&ドロップ、またはクリックして選択'}
+                        </p>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Download Sample Button */}
+            {markdownContent && (
+              <div className="mt-6 flex justify-center">
+                <Button
+                  variant="outline"
+                  onClick={downloadSampleMarkdown}
+                  className="border-2 border-slate-300 hover:border-indigo-400 hover:bg-indigo-50"
+                >
+                  <FileDown className="w-4 h-4 mr-2" />
+                  現在のMarkdownをダウンロード
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Template Selection */}
+        {markdownContent && (
+          <Card className="border-none shadow-2xl bg-white overflow-hidden">
+            <CardHeader className="border-b bg-gradient-to-r from-blue-600 to-indigo-600 text-white pb-6">
+              <div className="flex items-center gap-4">
+                <div className="p-4 rounded-2xl bg-white/20 backdrop-blur-sm border border-white/30 shadow-xl">
+                  <Palette className="w-7 h-7 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-3xl font-extrabold flex items-center gap-3">
+                    <span className="bg-yellow-300 text-blue-900 px-3 py-1 rounded-lg text-lg">STEP 2</span>
+                    デザインテンプレート選択
+                  </CardTitle>
+                  <CardDescription className="text-blue-100 text-base mt-2">プレゼンテーションの印象を決める重要なステップです</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-8 pb-8 bg-gradient-to-br from-slate-50 to-blue-50">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-5">
+                {TEMPLATES.map((template) => (
+                  <button
+                    key={template.id}
+                    onClick={() => setSelectedTemplate(template.id)}
+                    className={`group relative overflow-hidden rounded-2xl border-3 transition-all duration-300 ${
+                      selectedTemplate === template.id
+                        ? 'border-blue-600 shadow-2xl scale-105 ring-4 ring-blue-200'
+                        : 'border-slate-300 hover:border-blue-400 hover:shadow-xl hover:scale-102 bg-white'
+                    }`}
+                  >
+                    <div
+                      className="h-32 w-full relative"
+                      style={{
+                        background: `linear-gradient(135deg, ${template.colors[0]}, ${template.colors[1] || template.colors[0]})`
+                      }}
+                    >
+                      <div className="absolute inset-0 bg-black/5"></div>
+                      {selectedTemplate === template.id && (
+                        <div className="absolute top-3 right-3 bg-white rounded-full p-2 shadow-lg">
+                          <CheckCircle2 className="w-6 h-6 text-blue-600" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-4 bg-white">
+                      <div className="text-base font-bold text-slate-900 mb-1">{template.name}</div>
+                      <Badge variant="secondary" className="text-xs font-semibold">{template.category}</Badge>
+                    </div>
+                  </button>
+                ))}
+              </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Preview */}
-        {file && markdownContent && (
-          <>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <FileText className="w-4 h-4" />
-              <span>ステップ3: プレビューを確認</span>
-            </div>
-            <MdOutlinePreview markdown={showOptimized ? optimizedMarkdown : markdownContent} />
-          </>
+        {/* Markdown Preview & Analysis */}
+        {markdownContent && (
+          <Card className="border-none shadow-2xl bg-white overflow-hidden">
+            <CardHeader className="border-b bg-gradient-to-r from-emerald-600 to-teal-600 text-white">
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-xl bg-white/20 backdrop-blur-sm border border-white/30 shadow-lg">
+                    <FileText className="w-6 h-6 text-white" />
+                  </div>
+                  <CardTitle className="text-2xl font-bold">Markdownプレビュー</CardTitle>
+                </div>
+                {suggestions.length > 0 && (
+                  <Button
+                    size="sm"
+                    onClick={() => setShowOptimized(!showOptimized)}
+                    className="bg-white text-emerald-700 hover:bg-emerald-50 border-2 border-white shadow-lg font-semibold"
+                  >
+                    <Zap className="w-4 h-4 mr-2" />
+                    {showOptimized ? '元のMDを表示' : '最適化版を表示'}
+                  </Button>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="pt-6 space-y-6">
+              {/* Suggestions */}
+              {suggestions.length > 0 && (
+                <div className="space-y-3">
+                  <h4 className="font-bold text-sm text-slate-700 flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4" />
+                    最適化の提案
+                  </h4>
+                  <div className="space-y-2">
+                    {suggestions.map((suggestion, index) => (
+                      <div
+                        key={index}
+                        className={`flex gap-3 text-sm p-4 rounded-xl shadow-sm border ${
+                          suggestion.type === 'error'
+                            ? 'bg-red-50 text-red-900 border-red-200'
+                            : suggestion.type === 'warning'
+                            ? 'bg-amber-50 text-amber-900 border-amber-200'
+                            : 'bg-blue-50 text-blue-900 border-blue-200'
+                        }`}
+                      >
+                        <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                        <span className="leading-relaxed">{suggestion.message}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Outline Preview */}
+              <div>
+                <h4 className="font-bold text-sm text-slate-700 mb-3">スライド構成プレビュー</h4>
+                <MdOutlinePreview markdown={showOptimized ? optimizedMarkdown : markdownContent} />
+              </div>
+
+              {/* Markdown Content */}
+              <div>
+                <h4 className="font-bold text-sm text-slate-700 mb-3">Markdown内容</h4>
+                <ScrollArea className="h-80 w-full rounded-xl border-2 border-slate-200 bg-slate-50 shadow-inner">
+                  <pre className="p-6 text-sm font-mono leading-relaxed">
+                    {showOptimized ? optimizedMarkdown : markdownContent}
+                  </pre>
+                </ScrollArea>
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {/* Convert Button */}
         {file && (
-          <div className="flex justify-center py-8">
-            <Button
-              size="lg"
-              onClick={handleConvert}
-              disabled={converting}
-              className="relative overflow-hidden bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-700 hover:via-purple-700 hover:to-pink-700 text-white px-12 py-8 text-xl font-bold gap-3 shadow-2xl rounded-2xl hover:scale-105 transition-all duration-300 group"
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-pink-600 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <span className="relative z-10 flex items-center gap-3">
-                {converting ? (
-                  <>
-                    <Sparkles className="w-7 h-7 animate-spin" />
-                    ✨ 変換中...
-                  </>
-                ) : generatedFiles.length > 0 ? (
-                  <>
-                    <Wand2 className="w-7 h-7" />
-                    🎨 別のテンプレートで再生成
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-7 h-7" />
-                    🚀 PowerPointに変換
-                  </>
-                )}
-              </span>
-            </Button>
-          </div>
+          <Card className="border-none shadow-2xl bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 overflow-hidden relative">
+            <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzR2LTRoLTJ2NGgtNHYyaDR2NGgydi00aDR2LTJoLTR6bTAtMzBWMGgtMnY0aC00djJoNHY0aDJWNmg0VjRoLTR6TTYgMzR2LTRIDHY0aDB2Mmg0djRoMnYtNGg0di0ySDZ6TTYgNFYwSDR2NEgwdjJoNHY0aDJWNmg0VjRINnoiLz48L2c+PC9nPjwvc3ZnPg==')] opacity-20"></div>
+            <CardContent className="pt-10 pb-10 relative">
+              <div className="text-center space-y-6">
+                <div className="flex items-center justify-center gap-3 mb-4">
+                  <div className="p-4 rounded-2xl bg-white/20 backdrop-blur-sm border border-white/30 shadow-2xl">
+                    <Sparkles className="w-8 h-8 text-white" />
+                  </div>
+                  <h3 className="text-4xl font-black text-white">
+                    <span className="bg-yellow-300 text-red-600 px-4 py-2 rounded-xl text-2xl mr-3">STEP 3</span>
+                    変換実行
+                  </h3>
+                </div>
+                <p className="text-white text-lg font-semibold max-w-2xl mx-auto">
+                  選択したテンプレートで、あなたのMarkdownを美しいPowerPointプレゼンテーションに変換します
+                </p>
+                <Button
+                  onClick={handleConvert}
+                  disabled={converting}
+                  size="lg"
+                  className="bg-white text-red-600 hover:bg-yellow-50 shadow-2xl hover:shadow-3xl transition-all duration-300 px-16 py-8 text-2xl font-black rounded-2xl hover:scale-105"
+                >
+                  {converting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-3 border-red-600 mr-4"></div>
+                      変換中...
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="w-7 h-7 mr-3" />
+                      PowerPointに変換する
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {/* Generated Files */}
         {generatedFiles.length > 0 && (
-          <div className="relative">
-            {/* Celebration animation background */}
-            <div className="absolute -inset-4 bg-gradient-to-r from-green-400 via-emerald-400 to-teal-400 rounded-3xl blur-2xl opacity-20 animate-pulse"></div>
-
-            <Card className="relative border-0 shadow-2xl bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
-              <CardHeader className="bg-gradient-to-r from-green-100 to-emerald-100 border-b-2 border-green-200">
-                <div className="flex items-center gap-3">
-                  <div className="p-3 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 text-white">
-                    <CheckCircle2 className="w-8 h-8" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-3xl font-black bg-gradient-to-r from-green-700 to-emerald-700 bg-clip-text text-transparent">
-                      🎉 変換完了！
-                    </CardTitle>
-                    <CardDescription className="text-lg text-green-700 font-medium">
-                      {generatedFiles.length}個のファイルが生成されました
-                    </CardDescription>
-                  </div>
+          <Card className="border-none shadow-2xl bg-white overflow-hidden">
+            <CardHeader className="border-b bg-gradient-to-r from-green-600 to-emerald-600 text-white pb-6">
+              <div className="flex items-center gap-4">
+                <div className="p-4 rounded-2xl bg-white/20 backdrop-blur-sm border border-white/30 shadow-xl">
+                  <Download className="w-7 h-7 text-white" />
                 </div>
-              </CardHeader>
-              <CardContent className="p-6 space-y-4">
+                <div>
+                  <CardTitle className="text-3xl font-extrabold">生成されたファイル</CardTitle>
+                  <CardDescription className="text-green-100 text-base mt-2">
+                    {generatedFiles.length}個のPowerPointファイルが生成されました
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="space-y-4">
                 {generatedFiles.map((generatedFile, index) => (
                   <div
                     key={index}
-                    className={`flex items-center justify-between p-6 rounded-2xl border-2 transition-all hover:scale-[1.02] ${
+                    className={`group flex items-center justify-between p-6 rounded-xl border-2 transition-all duration-200 ${
                       generatedFile.downloaded
-                        ? 'bg-white/60 border-gray-200 backdrop-blur-sm'
-                        : 'bg-white border-green-300 shadow-lg'
+                        ? 'bg-slate-50 border-slate-200 shadow-sm'
+                        : 'bg-white border-green-200 shadow-md hover:shadow-lg'
                     }`}
                   >
-                    <div className="flex items-center gap-4">
-                      <div className={`p-4 rounded-xl transition-all ${
-                        generatedFile.downloaded
-                          ? 'bg-gray-100'
-                          : 'bg-gradient-to-br from-green-100 to-emerald-100'
-                      }`}>
-                        <FileText className={`w-7 h-7 ${
-                          generatedFile.downloaded ? 'text-gray-600' : 'text-green-600'
-                        }`} />
+                    <div className="flex-1 space-y-1">
+                      <div className="font-bold text-slate-900 text-lg flex items-center gap-2">
+                        <FileText className="w-5 h-5 text-indigo-600" />
+                        {generatedFile.filename}
                       </div>
-                      <div>
-                        <p className="font-bold text-lg">{generatedFile.filename}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Badge variant="secondary" className="font-medium">
-                            {generatedFile.templateName}
-                          </Badge>
-                          {generatedFile.downloaded && (
-                            <Badge variant="outline" className="text-xs">
-                              ✓ ダウンロード済み
-                            </Badge>
-                          )}
-                        </div>
+                      <div className="text-sm text-slate-600">
+                        テンプレート: <span className="font-semibold">{generatedFile.templateName}</span>
                       </div>
                     </div>
                     <Button
                       onClick={() => handleDownload(generatedFile)}
-                      variant={generatedFile.downloaded ? 'outline' : 'default'}
                       size="lg"
-                      className={`gap-2 px-6 py-6 text-lg rounded-xl font-semibold ${
-                        !generatedFile.downloaded && 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-lg'
-                      }`}
+                      variant={generatedFile.downloaded ? 'outline' : 'default'}
+                      className={generatedFile.downloaded ? '' : 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg hover:shadow-xl'}
                     >
-                      <Download className="w-5 h-5" />
+                      <Download className="w-5 h-5 mr-2" />
                       {generatedFile.downloaded ? '再ダウンロード' : 'ダウンロード'}
                     </Button>
                   </div>
                 ))}
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Preview Section */}
+        {previewFile && (
+          <PptxIframePreview fileUrl={previewFile.url} filename={previewFile.filename} />
         )}
       </div>
     </div>
