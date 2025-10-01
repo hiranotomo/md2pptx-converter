@@ -52,7 +52,7 @@ export class PptxGenerator {
     }
 
     let yPosition = 0.5 // Start position in inches
-    const maxY = 5.0 // Maximum Y position (leave 0.625 inches margin at bottom)
+    const maxY = 4.8 // Maximum Y position (leave ~0.8 inches margin at bottom for safety)
 
     for (const node of document.nodes) {
       // Calculate required height for this node
@@ -73,32 +73,58 @@ export class PptxGenerator {
 
   /**
    * Estimate the height a node will occupy
+   * Considers Japanese text which takes more vertical space
    */
-  private estimateNodeHeight(node: MarkdownNode): number {
+  private estimateNodeHeight(node: MarkdownNode, fontSize?: number): number {
+    // Helper to detect if text contains Japanese characters
+    const hasJapanese = (text: string) => /[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf]/.test(text)
+
     switch (node.type) {
       case 'heading': {
-        const textLength = (node.content || '').length
-        const estimatedLines = Math.ceil(textLength / 50)
-        return Math.max(0.5, estimatedLines * 0.4) + 0.3
+        const content = node.content || ''
+        const level = node.level || 1
+        const headingFontSize = fontSize || (level === 1 ? 32 : level === 2 ? 28 : 24)
+        const isJapanese = hasJapanese(content)
+
+        // Japanese characters are wider, so fewer chars per line
+        const charsPerLine = isJapanese ? 30 : 50
+        const estimatedLines = Math.ceil(content.length / charsPerLine)
+        const lineHeight = (headingFontSize / 72) * 1.2 // Convert pt to inches with line spacing
+
+        return Math.max(0.5, estimatedLines * lineHeight) + 0.3
       }
       case 'paragraph': {
-        const textLength = (node.content || '').length
-        const estimatedLines = Math.ceil(textLength / 70)
-        return Math.max(0.4, estimatedLines * 0.3) + 0.2
+        const content = node.content || ''
+        const bodyFontSize = fontSize || 14
+        const isJapanese = hasJapanese(content)
+
+        const charsPerLine = isJapanese ? 40 : 70
+        const estimatedLines = Math.ceil(content.length / charsPerLine)
+        const lineHeight = (bodyFontSize / 72) * 1.3
+
+        return Math.max(0.4, estimatedLines * lineHeight) + 0.2
       }
       case 'list': {
         const items = node.children || []
+        const bodyFontSize = fontSize || 14
         let totalHeight = 0
+
         items.forEach((item) => {
-          const textLength = (item.content || '').length
-          const estimatedLines = Math.ceil(textLength / 65)
-          totalHeight += Math.max(0.3, estimatedLines * 0.25)
+          const content = item.content || ''
+          const isJapanese = hasJapanese(content)
+          const charsPerLine = isJapanese ? 35 : 65
+          const estimatedLines = Math.ceil(content.length / charsPerLine)
+          const lineHeight = (bodyFontSize / 72) * 1.3
+          totalHeight += Math.max(0.35, estimatedLines * lineHeight)
         })
-        return totalHeight + 0.3
+
+        return totalHeight + 0.4
       }
       case 'code': {
         const lines = (node.content || '').split('\n').length
-        return Math.max(0.5, lines * 0.2) + 0.3
+        const codeFontSize = fontSize || 10
+        const lineHeight = (codeFontSize / 72) * 1.4
+        return Math.max(0.5, lines * lineHeight) + 0.3
       }
       default:
         return 0.5
@@ -124,6 +150,9 @@ export class PptxGenerator {
       case 'code':
         return this.renderCode(slide, node, layout, yPosition)
 
+      case 'table':
+        return this.renderTable(slide, node, layout, yPosition)
+
       default:
         return yPosition
     }
@@ -140,10 +169,12 @@ export class PptxGenerator {
     const style = layout.styles[styleKey] || layout.styles.body || {}
     const fontSize = style.fontSize || (level === 1 ? 32 : level === 2 ? 28 : 24)
 
-    // Calculate dynamic height based on text length
-    const textLength = (node.content || '').length
-    const estimatedLines = Math.ceil(textLength / 50)
-    const height = Math.max(0.5, estimatedLines * 0.4)
+    // Calculate dynamic height based on text length and language
+    const content = node.content || ''
+    const hasJapanese = /[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf]/.test(content)
+    const charsPerLine = hasJapanese ? 30 : 50
+    const estimatedLines = Math.ceil(content.length / charsPerLine)
+    const height = Math.max(0.5, estimatedLines * (fontSize / 72) * 1.2 + 0.3)
 
     // Parse inline formatting
     const formatted = parseInlineFormatting(node.content || '')
@@ -181,10 +212,11 @@ export class PptxGenerator {
     const content = node.content || ''
     const fontSize = style.fontSize || 14
 
-    // Calculate dynamic height based on text length
-    const textLength = content.length
-    const estimatedLines = Math.ceil(textLength / 70)
-    const height = Math.max(0.4, estimatedLines * 0.3)
+    // Calculate dynamic height based on text length and language
+    const hasJapanese = /[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf]/.test(content)
+    const charsPerLine = hasJapanese ? 40 : 70
+    const estimatedLines = Math.ceil(content.length / charsPerLine)
+    const height = Math.max(0.4, estimatedLines * (fontSize / 72) * 1.3 + 0.2)
 
     // Parse inline formatting
     const formatted = parseInlineFormatting(content)
@@ -220,22 +252,50 @@ export class PptxGenerator {
     const style = layout.styles.body || {}
     const items = node.children || []
     const fontSize = style.fontSize || 14
+    const maxY = 4.8 // Use same safety margin as main render loop
 
-    // Calculate total height for all list items
-    let totalHeight = 0
+    // Helper to detect Japanese text
+    const hasJapanese = (text: string) => /[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf]/.test(text)
+
+    // Calculate height for each item individually
+    const itemHeights: number[] = []
     items.forEach((item) => {
-      const textLength = (item.content || '').length
-      const estimatedLines = Math.ceil(textLength / 65)
-      totalHeight += Math.max(0.3, estimatedLines * 0.25)
+      const content = item.content || ''
+      const isJapanese = hasJapanese(content)
+      const charsPerLine = isJapanese ? 35 : 65
+      const estimatedLines = Math.ceil(content.length / charsPerLine)
+      const lineHeight = (fontSize / 72) * 1.3
+      itemHeights.push(Math.max(0.35, estimatedLines * lineHeight))
     })
 
-    // Parse inline formatting for each list item
-    const text: any[] = []
-    items.forEach((item) => {
+    let currentY = yPosition
+    let currentSlide = slide
+    let currentItems: any[] = []
+    let currentHeight = 0
+
+    // Process each item and split if necessary
+    items.forEach((item, index) => {
+      const itemHeight = itemHeights[index]
+
+      // Check if adding this item would overflow
+      if (currentY + currentHeight + itemHeight > maxY && currentItems.length > 0) {
+        // Render current batch
+        this.renderListBatch(currentSlide, currentItems, style, fontSize, currentY, currentHeight)
+
+        // Create new slide
+        currentSlide = this.pptx.addSlide()
+        if (layout.background?.color) {
+          currentSlide.background = { color: layout.background.color }
+        }
+        currentY = 0.5
+        currentItems = []
+        currentHeight = 0
+      }
+
+      // Add item to current batch
       const formatted = parseInlineFormatting(item.content || '')
       if (formatted.length === 1 && !formatted[0].bold && !formatted[0].italic) {
-        // Simple text
-        text.push({
+        currentItems.push({
           text: formatted[0].text,
           options: {
             bullet: true,
@@ -245,9 +305,8 @@ export class PptxGenerator {
           },
         })
       } else {
-        // Formatted text
         formatted.forEach((part, i) => {
-          text.push({
+          currentItems.push({
             text: part.text,
             options: {
               bullet: i === 0,
@@ -260,18 +319,55 @@ export class PptxGenerator {
           })
         })
       }
+
+      // Handle nested list items
+      if (item.children && item.children.length > 0) {
+        item.children.forEach((nestedItem: any) => {
+          const nestedFormatted = parseInlineFormatting(nestedItem.content || '')
+          nestedFormatted.forEach((part, i) => {
+            currentItems.push({
+              text: part.text,
+              options: {
+                bullet: i === 0,
+                bold: part.bold,
+                italic: part.italic,
+                fontSize: fontSize - 1, // Slightly smaller for nested items
+                color: style.color || '363636',
+                fontFace: style.fontFace || 'Arial',
+                indentLevel: 1, // Indent nested items
+              },
+            })
+          })
+        })
+      }
+
+      currentHeight += itemHeight
     })
 
-    slide.addText(text, {
+    // Render remaining items
+    if (currentItems.length > 0) {
+      this.renderListBatch(currentSlide, currentItems, style, fontSize, currentY, currentHeight)
+    }
+
+    return currentY + currentHeight + 0.3
+  }
+
+  private renderListBatch(
+    slide: PptxGenJS.Slide,
+    items: any[],
+    style: any,
+    fontSize: number,
+    yPosition: number,
+    height: number
+  ): void {
+    slide.addText(items, {
       x: 0.7,
       y: yPosition,
       w: 8.8,
-      h: totalHeight,
+      h: height,
       valign: 'top',
       wrap: true,
     })
-
-    return yPosition + totalHeight + 0.3
   }
 
   private renderCode(
@@ -299,6 +395,70 @@ export class PptxGenerator {
     })
 
     return yPosition + height + 0.3
+  }
+
+  private renderTable(
+    slide: PptxGenJS.Slide,
+    node: MarkdownNode,
+    layout: TemplateLayout,
+    yPosition: number
+  ): number {
+    const style = layout.styles.body || {}
+    const fontSize = style.fontSize || 12
+
+    // Extract table data from node
+    // Expected format: node.children = [header row, ...data rows]
+    // Each row has children = [cell, cell, cell...]
+    const rows = node.children || []
+    if (rows.length === 0) return yPosition
+
+    const tableData: any[][] = []
+    rows.forEach((row: any) => {
+      const rowData: any[] = []
+      ;(row.children || []).forEach((cell: any) => {
+        rowData.push({
+          text: cell.content || '',
+          options: {
+            fontSize,
+            color: style.color || '363636',
+            fontFace: style.fontFace || 'Arial',
+            align: 'left',
+            valign: 'middle',
+          },
+        })
+      })
+      tableData.push(rowData)
+    })
+
+    // Calculate table dimensions
+    const numCols = Math.max(...tableData.map((row) => row.length))
+    const numRows = tableData.length
+    const colWidth = 9 / numCols // Distribute width evenly
+    const rowHeight = 0.35 // Fixed row height
+    const tableHeight = numRows * rowHeight
+
+    // Add table to slide
+    slide.addTable(tableData, {
+      x: 0.5,
+      y: yPosition,
+      w: 9,
+      colW: Array(numCols).fill(colWidth),
+      rowH: Array(numRows).fill(rowHeight),
+      border: { pt: 1, color: 'CCCCCC' },
+      fill: { color: 'FFFFFF' },
+      // Make header row bold with background color
+      autoPage: false,
+    })
+
+    // Style header row if it exists
+    if (tableData.length > 0) {
+      tableData[0].forEach((cell: any) => {
+        cell.options.bold = true
+        cell.options.fill = { color: 'F0F0F0' }
+      })
+    }
+
+    return yPosition + tableHeight + 0.4
   }
 
   private getLayout(name: string): TemplateLayout {

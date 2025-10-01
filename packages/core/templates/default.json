@@ -59,6 +59,72 @@
           "align": "left"
         }
       }
+    },
+    {
+      "name": "title-only",
+      "background": {
+        "color": "FFFFFF"
+      },
+      "styles": {
+        "title": {
+          "fontSize": 56,
+          "fontFace": "Arial",
+          "color": "363636",
+          "bold": true,
+          "align": "center",
+          "valign": "middle"
+        },
+        "heading1": {
+          "fontSize": 36,
+          "fontFace": "Arial",
+          "color": "363636",
+          "bold": true,
+          "align": "center",
+          "valign": "middle"
+        },
+        "body": {
+          "fontSize": 24,
+          "fontFace": "Arial",
+          "color": "666666",
+          "align": "center",
+          "valign": "middle"
+        }
+      }
+    },
+    {
+      "name": "two-column",
+      "background": {
+        "color": "FFFFFF"
+      },
+      "styles": {
+        "title": {
+          "fontSize": 36,
+          "fontFace": "Arial",
+          "color": "363636",
+          "bold": true,
+          "align": "left"
+        },
+        "heading1": {
+          "fontSize": 28,
+          "fontFace": "Arial",
+          "color": "363636",
+          "bold": true,
+          "align": "left"
+        },
+        "heading2": {
+          "fontSize": 24,
+          "fontFace": "Arial",
+          "color": "666666",
+          "bold": true,
+          "align": "left"
+        },
+        "body": {
+          "fontSize": 16,
+          "fontFace": "Arial",
+          "color": "363636",
+          "align": "left"
+        }
+      }
     }
   ],
   "defaultLayout": "standard"

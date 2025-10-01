@@ -38,10 +38,27 @@ export class MarkdownParser {
         }
 
       case 'list': {
-        const children = token.items.map((item: any) => ({
-          type: 'listItem' as const,
-          content: item.text,
-        }))
+        const children = token.items.map((item: any) => {
+          const listItem: any = {
+            type: 'listItem' as const,
+            content: item.text,
+          }
+          // Handle nested lists
+          if (item.task !== undefined) {
+            listItem.checked = item.checked
+          }
+          if (item.tokens && item.tokens.length > 0) {
+            // Look for nested lists
+            const nestedList = item.tokens.find((t: any) => t.type === 'list')
+            if (nestedList) {
+              listItem.children = nestedList.items.map((nestedItem: any) => ({
+                type: 'listItem' as const,
+                content: nestedItem.text,
+              }))
+            }
+          }
+          return listItem
+        })
         return {
           type: 'list',
           children,
@@ -62,11 +79,32 @@ export class MarkdownParser {
           alt: token.text,
         }
 
-      case 'table':
+      case 'table': {
+        // Parse table header and rows
+        const header = token.header.map((cell: any) => ({
+          type: 'tableCell' as const,
+          content: typeof cell === 'string' ? cell : cell.text || '',
+        }))
+
+        const rows = token.rows.map((row: any[]) => ({
+          type: 'tableRow' as const,
+          children: row.map((cell: any) => ({
+            type: 'tableCell' as const,
+            content: typeof cell === 'string' ? cell : cell.text || '',
+          })),
+        }))
+
         return {
           type: 'table',
-          children: [], // TODO: Implement table parsing
+          children: [
+            {
+              type: 'tableRow' as const,
+              children: header,
+            },
+            ...rows,
+          ],
         }
+      }
 
       default:
         return null
