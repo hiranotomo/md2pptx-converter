@@ -22,6 +22,52 @@ export class PptxGenerator {
       })
       this.pptx.layout = 'CUSTOM'
     }
+
+    // Define slide master with placeholders for outline support
+    this.defineSlideMaster()
+  }
+
+  /**
+   * Define slide master with title and body placeholders
+   * This enables proper outline view in PowerPoint
+   */
+  private defineSlideMaster(): void {
+    const layout = this.getLayout(this.template.defaultLayout)
+    const titleStyle = layout.styles.title || layout.styles.heading1 || {}
+    const bodyStyle = layout.styles.body || {}
+
+    this.pptx.defineSlideMaster({
+      title: 'MASTER_SLIDE',
+      background: { color: layout.background?.color || 'FFFFFF' },
+      objects: [
+        {
+          placeholder: {
+            options: {
+              name: 'title',
+              type: 'title',
+              x: 0.5,
+              y: 0.5,
+              w: 9,
+              h: 1.0,
+            },
+            text: 'Click to add title',
+          },
+        },
+        {
+          placeholder: {
+            options: {
+              name: 'body',
+              type: 'body',
+              x: 0.5,
+              y: 1.5,
+              w: 9,
+              h: 4.0,
+            },
+            text: 'Click to add text',
+          },
+        },
+      ],
+    })
   }
 
   /**
@@ -87,15 +133,10 @@ export class PptxGenerator {
   }
 
   /**
-   * Render a group of nodes as a single slide with proper placeholders
+   * Render a group of nodes as a single slide using master layout
    */
   private renderSlideGroup(nodes: MarkdownNode[], layout: TemplateLayout): void {
-    const slide = this.pptx.addSlide()
-
-    // Set background
-    if (layout.background?.color) {
-      slide.background = { color: layout.background.color }
-    }
+    const slide = this.pptx.addSlide({ masterName: 'MASTER_SLIDE' })
 
     // Find title (first H1 or H2)
     const titleNode = nodes.find(n => n.type === 'heading' && (n.level === 1 || n.level === 2))
@@ -116,18 +157,13 @@ export class PptxGenerator {
       })
     }
 
-    // Add content using body placeholder
+    // Add content using placeholder
     if (contentNodes.length > 0) {
       const contentText = this.buildContentText(contentNodes, layout)
 
       if (contentText.length > 0) {
         slide.addText(contentText, {
           placeholder: 'body',
-          x: 0.5,
-          y: titleNode ? 1.2 : 0.5,
-          w: 9,
-          h: 4.0,
-          valign: 'top',
         })
       }
     }
@@ -307,11 +343,7 @@ export class PptxGenerator {
    * Handle tables separately as they need special rendering
    */
   private renderTableSlide(node: MarkdownNode, layout: TemplateLayout): void {
-    const slide = this.pptx.addSlide()
-
-    if (layout.background?.color) {
-      slide.background = { color: layout.background.color }
-    }
+    const slide = this.pptx.addSlide({ masterName: 'MASTER_SLIDE' })
 
     const style = layout.styles.body || {}
     const fontSize = style.fontSize || 12
