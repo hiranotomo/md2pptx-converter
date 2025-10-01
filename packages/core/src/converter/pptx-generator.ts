@@ -1,5 +1,6 @@
 import PptxGenJS from 'pptxgenjs'
 import type { MarkdownDocument, MarkdownNode, Template, TemplateLayout } from '../types/index.js'
+import { parseInlineFormatting, toPptxTextArray } from '../parser/markdown-formatter.js'
 
 /**
  * Generate PPTX from Markdown AST
@@ -43,7 +44,7 @@ export class PptxGenerator {
 
   private renderDocument(document: MarkdownDocument): void {
     const layout = this.getLayout(this.template.defaultLayout)
-    const slide = this.pptx.addSlide()
+    let slide = this.pptx.addSlide()
 
     // Set background
     if (layout.background?.color) {
@@ -51,9 +52,56 @@ export class PptxGenerator {
     }
 
     let yPosition = 0.5 // Start position in inches
+    const maxY = 5.0 // Maximum Y position (leave 0.625 inches margin at bottom)
 
     for (const node of document.nodes) {
+      // Calculate required height for this node
+      const estimatedHeight = this.estimateNodeHeight(node)
+
+      // If content would overflow, create new slide
+      if (yPosition + estimatedHeight > maxY && yPosition > 0.5) {
+        slide = this.pptx.addSlide()
+        if (layout.background?.color) {
+          slide.background = { color: layout.background.color }
+        }
+        yPosition = 0.5
+      }
+
       yPosition = this.renderNode(slide, node, layout, yPosition)
+    }
+  }
+
+  /**
+   * Estimate the height a node will occupy
+   */
+  private estimateNodeHeight(node: MarkdownNode): number {
+    switch (node.type) {
+      case 'heading': {
+        const textLength = (node.content || '').length
+        const estimatedLines = Math.ceil(textLength / 50)
+        return Math.max(0.5, estimatedLines * 0.4) + 0.3
+      }
+      case 'paragraph': {
+        const textLength = (node.content || '').length
+        const estimatedLines = Math.ceil(textLength / 70)
+        return Math.max(0.4, estimatedLines * 0.3) + 0.2
+      }
+      case 'list': {
+        const items = node.children || []
+        let totalHeight = 0
+        items.forEach((item) => {
+          const textLength = (item.content || '').length
+          const estimatedLines = Math.ceil(textLength / 65)
+          totalHeight += Math.max(0.3, estimatedLines * 0.25)
+        })
+        return totalHeight + 0.3
+      }
+      case 'code': {
+        const lines = (node.content || '').split('\n').length
+        return Math.max(0.5, lines * 0.2) + 0.3
+      }
+      default:
+        return 0.5
     }
   }
 
@@ -94,18 +142,27 @@ export class PptxGenerator {
 
     // Calculate dynamic height based on text length
     const textLength = (node.content || '').length
-    const estimatedLines = Math.ceil(textLength / 50) // Approximate 50 chars per line
+    const estimatedLines = Math.ceil(textLength / 50)
     const height = Math.max(0.5, estimatedLines * 0.4)
 
-    slide.addText(node.content || '', {
+    // Parse inline formatting
+    const formatted = parseInlineFormatting(node.content || '')
+    const textArray = toPptxTextArray(formatted).map((part) => ({
+      text: part.text,
+      options: {
+        ...part.options,
+        bold: part.options?.bold ?? style.bold !== false,
+        fontSize,
+        color: style.color || '363636',
+        fontFace: style.fontFace || 'Arial',
+      },
+    }))
+
+    slide.addText(textArray, {
       x: 0.5,
       y: yPosition,
       w: 9,
       h: height,
-      fontSize,
-      bold: style.bold !== false,
-      color: style.color || '363636',
-      fontFace: style.fontFace || 'Arial',
       align: style.align,
       valign: 'top',
       wrap: true,
@@ -122,20 +179,30 @@ export class PptxGenerator {
   ): number {
     const style = layout.styles.body || {}
     const content = node.content || ''
+    const fontSize = style.fontSize || 14
 
     // Calculate dynamic height based on text length
     const textLength = content.length
-    const estimatedLines = Math.ceil(textLength / 70) // Approximate 70 chars per line for body text
+    const estimatedLines = Math.ceil(textLength / 70)
     const height = Math.max(0.4, estimatedLines * 0.3)
 
-    slide.addText(content, {
+    // Parse inline formatting
+    const formatted = parseInlineFormatting(content)
+    const textArray = toPptxTextArray(formatted).map((part) => ({
+      text: part.text,
+      options: {
+        ...part.options,
+        fontSize,
+        color: style.color || '363636',
+        fontFace: style.fontFace || 'Arial',
+      },
+    }))
+
+    slide.addText(textArray, {
       x: 0.5,
       y: yPosition,
       w: 9,
       h: height,
-      fontSize: style.fontSize || 14,
-      color: style.color || '363636',
-      fontFace: style.fontFace || 'Arial',
       align: style.align,
       valign: 'top',
       wrap: true,
@@ -152,26 +219,54 @@ export class PptxGenerator {
   ): number {
     const style = layout.styles.body || {}
     const items = node.children || []
+    const fontSize = style.fontSize || 14
 
     // Calculate total height for all list items
     let totalHeight = 0
     items.forEach((item) => {
       const textLength = (item.content || '').length
-      const estimatedLines = Math.ceil(textLength / 65) // Approximate 65 chars per line for list items
+      const estimatedLines = Math.ceil(textLength / 65)
       totalHeight += Math.max(0.3, estimatedLines * 0.25)
     })
 
-    const text = items
-      .map((item) => ({ text: item.content || '', options: { bullet: true } }))
+    // Parse inline formatting for each list item
+    const text: any[] = []
+    items.forEach((item) => {
+      const formatted = parseInlineFormatting(item.content || '')
+      if (formatted.length === 1 && !formatted[0].bold && !formatted[0].italic) {
+        // Simple text
+        text.push({
+          text: formatted[0].text,
+          options: {
+            bullet: true,
+            fontSize,
+            color: style.color || '363636',
+            fontFace: style.fontFace || 'Arial',
+          },
+        })
+      } else {
+        // Formatted text
+        formatted.forEach((part, i) => {
+          text.push({
+            text: part.text,
+            options: {
+              bullet: i === 0,
+              bold: part.bold,
+              italic: part.italic,
+              fontSize,
+              color: style.color || '363636',
+              fontFace: style.fontFace || 'Arial',
+            },
+          })
+        })
+      }
+    })
 
     slide.addText(text, {
       x: 0.7,
       y: yPosition,
       w: 8.8,
       h: totalHeight,
-      fontSize: style.fontSize || 14,
-      color: style.color || '363636',
-      fontFace: style.fontFace || 'Arial',
       valign: 'top',
       wrap: true,
     })

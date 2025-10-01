@@ -1,10 +1,10 @@
 {
-  "id": "default",
-  "name": "Default Clean",
-  "description": "Simple and clean template suitable for any presentation",
+  "id": "minimal-elegant",
+  "name": "Minimal Elegant",
+  "description": "Clean minimalist design with elegant typography",
   "category": "Minimal",
   "author": "Md2Pptx",
-  "colors": ["#FFFFFF", "#363636", "#666666"],
+  "colors": ["#000000", "#9CA3AF", "#F3F4F6"],
   "version": "1.0.0",
   "slideSize": {
     "width": 10,
@@ -18,44 +18,43 @@
       },
       "styles": {
         "title": {
-          "fontSize": 44,
+          "fontSize": 56,
           "fontFace": "Arial",
-          "color": "363636",
+          "color": "000000",
           "bold": true,
-          "align": "center",
-          "valign": "middle"
+          "align": "center"
         },
         "heading1": {
-          "fontSize": 32,
+          "fontSize": 40,
           "fontFace": "Arial",
-          "color": "363636",
+          "color": "000000",
           "bold": true,
           "align": "left"
         },
         "heading2": {
-          "fontSize": 28,
+          "fontSize": 32,
           "fontFace": "Arial",
-          "color": "666666",
-          "bold": true,
+          "color": "4B5563",
+          "bold": false,
           "align": "left"
         },
         "heading3": {
           "fontSize": 24,
           "fontFace": "Arial",
-          "color": "666666",
+          "color": "6B7280",
           "bold": false,
           "align": "left"
         },
         "body": {
           "fontSize": 18,
           "fontFace": "Arial",
-          "color": "363636",
+          "color": "374151",
           "align": "left"
         },
         "code": {
           "fontSize": 14,
           "fontFace": "Courier New",
-          "color": "000000",
+          "color": "1F2937",
           "align": "left"
         }
       }

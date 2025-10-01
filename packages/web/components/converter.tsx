@@ -2,19 +2,43 @@
 
 import { useState, useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
-import { Upload, FileText, Download, Sparkles } from 'lucide-react'
+import { Upload, FileText, Download, Sparkles, Palette } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+
+const TEMPLATES = [
+  { id: 'default', name: 'Default Clean', category: 'Minimal', colors: ['#FFFFFF', '#363636'] },
+  { id: 'corporate-blue', name: 'Corporate Blue', category: 'Corporate', colors: ['#1E3A8A', '#3B82F6'] },
+  { id: 'modern-gradient', name: 'Modern Gradient', category: 'Modern', colors: ['#8B5CF6', '#EC4899'] },
+  { id: 'minimal-elegant', name: 'Minimal Elegant', category: 'Minimal', colors: ['#000000', '#9CA3AF'] },
+  { id: 'vibrant-creative', name: 'Vibrant Creative', category: 'Creative', colors: ['#EF4444', '#F59E0B'] },
+]
+
+interface GeneratedFile {
+  url: string
+  template: string
+  templateName: string
+  filename: string
+  downloaded: boolean
+}
 
 export function Converter() {
   const [file, setFile] = useState<File | null>(null)
   const [converting, setConverting] = useState(false)
-  const [downloadUrl, setDownloadUrl] = useState<string | null>(null)
+  const [selectedTemplate, setSelectedTemplate] = useState('default')
+  const [generatedFiles, setGeneratedFiles] = useState<GeneratedFile[]>([])
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0) {
       setFile(acceptedFiles[0])
-      setDownloadUrl(null)
+      setGeneratedFiles([]) // Clear previous generations
     }
   }, [])
 
@@ -33,6 +57,7 @@ export function Converter() {
     try {
       const formData = new FormData()
       formData.append('file', file)
+      formData.append('template', selectedTemplate)
 
       const response = await fetch('/api/convert', {
         method: 'POST',
@@ -45,7 +70,20 @@ export function Converter() {
 
       const blob = await response.blob()
       const url = URL.createObjectURL(blob)
-      setDownloadUrl(url)
+
+      const template = TEMPLATES.find(t => t.id === selectedTemplate)
+      const filename = file?.name.replace(/\.md$/, `.${selectedTemplate}.pptx`) || `presentation.${selectedTemplate}.pptx`
+
+      setGeneratedFiles(prev => [
+        ...prev,
+        {
+          url,
+          template: selectedTemplate,
+          templateName: template?.name || selectedTemplate,
+          filename,
+          downloaded: false,
+        }
+      ])
     } catch (error) {
       console.error('Conversion error:', error)
       alert('変換に失敗しました')
@@ -54,19 +92,63 @@ export function Converter() {
     }
   }
 
-  const handleDownload = () => {
-    if (downloadUrl) {
-      const a = document.createElement('a')
-      a.href = downloadUrl
-      a.download = file?.name.replace(/\.md$/, '.pptx') || 'presentation.pptx'
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-    }
+  const handleDownload = (generatedFile: GeneratedFile) => {
+    const a = document.createElement('a')
+    a.href = generatedFile.url
+    a.download = generatedFile.filename
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+
+    // Mark as downloaded
+    setGeneratedFiles(prev => prev.map(f =>
+      f.url === generatedFile.url ? { ...f, downloaded: true } : f
+    ))
   }
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-6">
+      {/* Template Selector */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Palette className="w-5 h-5" />
+            テンプレートを選択
+          </CardTitle>
+          <CardDescription>
+            プレゼンテーションのデザインテンプレートを選択してください
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="テンプレートを選択" />
+            </SelectTrigger>
+            <SelectContent>
+              {TEMPLATES.map((template) => (
+                <SelectItem key={template.id} value={template.id}>
+                  <div className="flex items-center gap-2">
+                    <div className="flex gap-1">
+                      {template.colors.slice(0, 2).map((color, i) => (
+                        <div
+                          key={i}
+                          className="w-4 h-4 rounded-full border"
+                          style={{ backgroundColor: color }}
+                        />
+                      ))}
+                    </div>
+                    <span className="font-medium">{template.name}</span>
+                    <span className="text-xs text-muted-foreground">
+                      ({template.category})
+                    </span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </CardContent>
+      </Card>
+
       {/* Upload Area */}
       <Card>
         <CardHeader>
@@ -125,8 +207,8 @@ export function Converter() {
         </CardContent>
       </Card>
 
-      {/* Convert Button */}
-      {file && !downloadUrl && (
+      {/* Convert/Regenerate Button */}
+      {file && (
         <div className="flex justify-center">
           <Button
             size="lg"
@@ -139,6 +221,11 @@ export function Converter() {
                 <Sparkles className="w-5 h-5 animate-spin" />
                 変換中...
               </>
+            ) : generatedFiles.length > 0 ? (
+              <>
+                <Sparkles className="w-5 h-5" />
+                再生成（{TEMPLATES.find(t => t.id === selectedTemplate)?.name}）
+              </>
             ) : (
               <>
                 <Sparkles className="w-5 h-5" />
@@ -149,27 +236,52 @@ export function Converter() {
         </div>
       )}
 
-      {/* Download Area */}
-      {downloadUrl && (
+      {/* Generated Files List */}
+      {generatedFiles.length > 0 && (
         <Card className="border-green-500/50 bg-green-50 dark:bg-green-950/20">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-full bg-green-500/10">
-                  <FileText className="w-6 h-6 text-green-600 dark:text-green-400" />
+          <CardHeader>
+            <CardTitle className="text-lg">生成されたファイル</CardTitle>
+            <CardDescription>
+              異なるテンプレートで再生成することもできます
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {generatedFiles.map((generatedFile, index) => (
+              <div
+                key={index}
+                className={`flex items-center justify-between p-3 rounded-lg border ${
+                  generatedFile.downloaded
+                    ? 'bg-muted/50 border-muted opacity-60'
+                    : 'bg-background border-border'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-full ${
+                    generatedFile.downloaded ? 'bg-muted' : 'bg-green-500/10'
+                  }`}>
+                    <FileText className={`w-5 h-5 ${
+                      generatedFile.downloaded ? 'text-muted-foreground' : 'text-green-600 dark:text-green-400'
+                    }`} />
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm">{generatedFile.filename}</p>
+                    <p className="text-xs text-muted-foreground">
+                      テンプレート: {generatedFile.templateName}
+                      {generatedFile.downloaded && ' (ダウンロード済み)'}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-medium">変換完了！</p>
-                  <p className="text-sm text-muted-foreground">
-                    PowerPointファイルをダウンロードできます
-                  </p>
-                </div>
+                <Button
+                  onClick={() => handleDownload(generatedFile)}
+                  variant={generatedFile.downloaded ? 'outline' : 'default'}
+                  size="sm"
+                  className="gap-2"
+                >
+                  <Download className="w-4 h-4" />
+                  {generatedFile.downloaded ? '再ダウンロード' : 'ダウンロード'}
+                </Button>
               </div>
-              <Button onClick={handleDownload} className="gap-2">
-                <Download className="w-4 h-4" />
-                ダウンロード
-              </Button>
-            </div>
+            ))}
           </CardContent>
         </Card>
       )}

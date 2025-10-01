@@ -70,3 +70,4 @@ export class Md2PptxConverter {
 export * from './types/index.js'
 export { MarkdownParser } from './parser/markdown-parser.js'
 export { PptxGenerator } from './converter/pptx-generator.js'
+export { loadTemplate, getAllTemplates, AVAILABLE_TEMPLATES, type TemplateId } from './templates/index.js'

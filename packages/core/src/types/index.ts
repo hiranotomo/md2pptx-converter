@@ -56,7 +56,12 @@ export const TemplateLayoutSchema = z.object({
 export type TemplateLayout = z.infer<typeof TemplateLayoutSchema>
 
 export const TemplateSchema = z.object({
+  id: z.string(),
   name: z.string(),
+  description: z.string().optional(),
+  category: z.enum(['Corporate', 'Modern', 'Minimal', 'Creative']).optional(),
+  author: z.string().optional(),
+  colors: z.array(z.string()).optional(),
   version: z.string(),
   slideSize: z.object({
     width: z.number(),

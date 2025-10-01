@@ -1,10 +1,10 @@
 {
-  "id": "default",
-  "name": "Default Clean",
-  "description": "Simple and clean template suitable for any presentation",
-  "category": "Minimal",
+  "id": "vibrant-creative",
+  "name": "Vibrant Creative",
+  "description": "Bold and colorful design for creative presentations",
+  "category": "Creative",
   "author": "Md2Pptx",
-  "colors": ["#FFFFFF", "#363636", "#666666"],
+  "colors": ["#EF4444", "#F59E0B", "#10B981", "#3B82F6", "#8B5CF6"],
   "version": "1.0.0",
   "slideSize": {
     "width": 10,
@@ -14,48 +14,47 @@
     {
       "name": "standard",
       "background": {
-        "color": "FFFFFF"
+        "color": "FFFBEB"
       },
       "styles": {
         "title": {
-          "fontSize": 44,
+          "fontSize": 54,
           "fontFace": "Arial",
-          "color": "363636",
+          "color": "EF4444",
           "bold": true,
-          "align": "center",
-          "valign": "middle"
+          "align": "center"
         },
         "heading1": {
-          "fontSize": 32,
+          "fontSize": 42,
           "fontFace": "Arial",
-          "color": "363636",
+          "color": "F59E0B",
           "bold": true,
           "align": "left"
         },
         "heading2": {
-          "fontSize": 28,
+          "fontSize": 32,
           "fontFace": "Arial",
-          "color": "666666",
+          "color": "10B981",
           "bold": true,
           "align": "left"
         },
         "heading3": {
-          "fontSize": 24,
+          "fontSize": 26,
           "fontFace": "Arial",
-          "color": "666666",
+          "color": "3B82F6",
           "bold": false,
           "align": "left"
         },
         "body": {
-          "fontSize": 18,
+          "fontSize": 17,
           "fontFace": "Arial",
-          "color": "363636",
+          "color": "1F2937",
           "align": "left"
         },
         "code": {
-          "fontSize": 14,
+          "fontSize": 13,
           "fontFace": "Courier New",
-          "color": "000000",
+          "color": "374151",
           "align": "left"
         }
       }

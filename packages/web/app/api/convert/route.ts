@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { Md2PptxConverter } from '@md2pptx/core'
-import { readFileSync } from 'fs'
-import { join } from 'path'
+import { Md2PptxConverter, loadTemplate, type TemplateId } from '@md2pptx/core'
 
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
     const file = formData.get('file') as File
+    const templateId = (formData.get('template') as string) || 'default'
 
     if (!file) {
       return NextResponse.json(
@@ -19,9 +18,8 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(await file.arrayBuffer())
     const markdown = buffer.toString('utf-8')
 
-    // Load default template
-    const templatePath = join(process.cwd(), '../../packages/core/templates/default.json')
-    const template = JSON.parse(readFileSync(templatePath, 'utf-8'))
+    // Load selected template
+    const template = loadTemplate(templateId as TemplateId)
 
     // Convert
     const converter = new Md2PptxConverter({

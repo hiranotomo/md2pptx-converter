@@ -1,10 +1,10 @@
 {
-  "id": "default",
-  "name": "Default Clean",
-  "description": "Simple and clean template suitable for any presentation",
-  "category": "Minimal",
+  "id": "modern-gradient",
+  "name": "Modern Gradient",
+  "description": "Contemporary design with gradient accents (2025 trend)",
+  "category": "Modern",
   "author": "Md2Pptx",
-  "colors": ["#FFFFFF", "#363636", "#666666"],
+  "colors": ["#8B5CF6", "#EC4899", "#F59E0B", "#10B981"],
   "version": "1.0.0",
   "slideSize": {
     "width": 10,
@@ -14,48 +14,47 @@
     {
       "name": "standard",
       "background": {
-        "color": "FFFFFF"
+        "color": "FAFAFA"
       },
       "styles": {
         "title": {
-          "fontSize": 44,
+          "fontSize": 52,
           "fontFace": "Arial",
-          "color": "363636",
+          "color": "8B5CF6",
           "bold": true,
-          "align": "center",
-          "valign": "middle"
+          "align": "center"
         },
         "heading1": {
-          "fontSize": 32,
+          "fontSize": 38,
           "fontFace": "Arial",
-          "color": "363636",
+          "color": "8B5CF6",
           "bold": true,
           "align": "left"
         },
         "heading2": {
-          "fontSize": 28,
+          "fontSize": 30,
           "fontFace": "Arial",
-          "color": "666666",
+          "color": "EC4899",
           "bold": true,
           "align": "left"
         },
         "heading3": {
           "fontSize": 24,
           "fontFace": "Arial",
-          "color": "666666",
+          "color": "F59E0B",
           "bold": false,
           "align": "left"
         },
         "body": {
-          "fontSize": 18,
+          "fontSize": 16,
           "fontFace": "Arial",
-          "color": "363636",
+          "color": "374151",
           "align": "left"
         },
         "code": {
-          "fontSize": 14,
+          "fontSize": 12,
           "fontFace": "Courier New",
-          "color": "000000",
+          "color": "1F2937",
           "align": "left"
         }
       }
