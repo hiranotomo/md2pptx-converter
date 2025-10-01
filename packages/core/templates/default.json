@@ -1,0 +1,60 @@
+{
+  "name": "default",
+  "version": "1.0.0",
+  "slideSize": {
+    "width": 10,
+    "height": 5.625
+  },
+  "layouts": [
+    {
+      "name": "standard",
+      "background": {
+        "color": "FFFFFF"
+      },
+      "styles": {
+        "title": {
+          "fontSize": 44,
+          "fontFace": "Arial",
+          "color": "363636",
+          "bold": true,
+          "align": "center",
+          "valign": "middle"
+        },
+        "heading1": {
+          "fontSize": 32,
+          "fontFace": "Arial",
+          "color": "363636",
+          "bold": true,
+          "align": "left"
+        },
+        "heading2": {
+          "fontSize": 28,
+          "fontFace": "Arial",
+          "color": "666666",
+          "bold": true,
+          "align": "left"
+        },
+        "heading3": {
+          "fontSize": 24,
+          "fontFace": "Arial",
+          "color": "666666",
+          "bold": false,
+          "align": "left"
+        },
+        "body": {
+          "fontSize": 18,
+          "fontFace": "Arial",
+          "color": "363636",
+          "align": "left"
+        },
+        "code": {
+          "fontSize": 14,
+          "fontFace": "Courier New",
+          "color": "000000",
+          "align": "left"
+        }
+      }
+    }
+  ],
+  "defaultLayout": "standard"
+}

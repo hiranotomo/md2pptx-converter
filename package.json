@@ -1,0 +1,25 @@
+{
+  "name": "md2pptx-workspace",
+  "version": "0.1.0",
+  "description": "Markdown to PowerPoint converter - Monorepo",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:core": "npm run dev --workspace=@md2pptx/core",
+    "dev:web": "npm run dev --workspace=@md2pptx/web",
+    "build": "npm run build --workspaces",
+    "build:core": "npm run build --workspace=@md2pptx/core",
+    "build:web": "npm run build --workspace=@md2pptx/web",
+    "test": "npm run test --workspaces"
+  },
+  "keywords": [
+    "markdown",
+    "powerpoint",
+    "pptx",
+    "converter"
+  ],
+  "author": "",
+  "license": "MIT"
+}
