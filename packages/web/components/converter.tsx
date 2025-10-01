@@ -12,7 +12,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { PptxPreview } from '@/components/pptx-preview'
 import { MdOutlinePreview } from '@/components/md-outline-preview'
 
 const TEMPLATES = [
@@ -37,7 +36,6 @@ export function Converter() {
   const [converting, setConverting] = useState(false)
   const [selectedTemplate, setSelectedTemplate] = useState('default')
   const [generatedFiles, setGeneratedFiles] = useState<GeneratedFile[]>([])
-  const [previewFile, setPreviewFile] = useState<GeneratedFile | null>(null)
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0) {
@@ -92,7 +90,6 @@ export function Converter() {
       }
 
       setGeneratedFiles(prev => [...prev, newFile])
-      setPreviewFile(newFile) // Auto-preview the newly generated file
     } catch (error) {
       console.error('Conversion error:', error)
       alert('変換に失敗しました')
@@ -285,34 +282,19 @@ export function Converter() {
                     </p>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() => setPreviewFile(generatedFile)}
-                    variant="outline"
-                    size="sm"
-                    className="gap-2"
-                  >
-                    プレビュー
-                  </Button>
-                  <Button
-                    onClick={() => handleDownload(generatedFile)}
-                    variant={generatedFile.downloaded ? 'outline' : 'default'}
-                    size="sm"
-                    className="gap-2"
-                  >
-                    <Download className="w-4 h-4" />
-                    {generatedFile.downloaded ? '再ダウンロード' : 'ダウンロード'}
-                  </Button>
-                </div>
+                <Button
+                  onClick={() => handleDownload(generatedFile)}
+                  variant={generatedFile.downloaded ? 'outline' : 'default'}
+                  size="sm"
+                  className="gap-2"
+                >
+                  <Download className="w-4 h-4" />
+                  {generatedFile.downloaded ? '再ダウンロード' : 'ダウンロード'}
+                </Button>
               </div>
             ))}
           </CardContent>
         </Card>
-      )}
-
-      {/* Preview Section */}
-      {previewFile && (
-        <PptxPreview fileUrl={previewFile.url} filename={previewFile.filename} />
       )}
     </div>
   )

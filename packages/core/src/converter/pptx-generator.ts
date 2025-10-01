@@ -142,12 +142,20 @@ export class PptxGenerator {
     const titleNode = nodes.find(n => n.type === 'heading' && (n.level === 1 || n.level === 2))
     const contentNodes = titleNode ? nodes.filter(n => n !== titleNode) : nodes
 
-    // Add title using placeholder
+    // Add title using placeholder with dynamic font sizing
     if (titleNode) {
       const style = layout.styles.title || layout.styles.heading1 || {}
-      const fontSize = style.fontSize || 32
+      const titleText = titleNode.content || ''
 
-      slide.addText(titleNode.content || '', {
+      // Dynamic font size based on title length
+      let fontSize = style.fontSize || 32
+      if (titleText.length > 50) {
+        fontSize = 24
+      } else if (titleText.length > 30) {
+        fontSize = 28
+      }
+
+      slide.addText(titleText, {
         placeholder: 'title',
         fontSize,
         bold: style.bold !== false,
