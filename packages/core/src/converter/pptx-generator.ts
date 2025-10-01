@@ -416,4 +416,11 @@ export class PptxGenerator {
   async save(filename: string): Promise<void> {
     await this.pptx.writeFile({ fileName: filename })
   }
+
+  /**
+   * Get PPTX buffer
+   */
+  async write(options: { outputType: 'arraybuffer' | 'base64' | 'blob' | 'nodebuffer' }): Promise<ArrayBuffer | string | Blob | Uint8Array> {
+    return await this.pptx.write(options)
+  }
 }

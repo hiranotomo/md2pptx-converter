@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     const generator = await converter.convert(markdown)
 
     // Generate PPTX buffer
-    const pptxBuffer = await generator.pptx.write({ outputType: 'arraybuffer' })
+    const pptxBuffer = await generator.write({ outputType: 'arraybuffer' })
 
     // Return PPTX file
     return new NextResponse(pptxBuffer as ArrayBuffer, {

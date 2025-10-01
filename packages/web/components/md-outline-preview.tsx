@@ -177,7 +177,7 @@ function parseMarkdownToSlides(markdown: string): SlidePreview[] {
         slides.push({
           slideNumber: currentSlide.slideNumber!,
           title: currentSlide.title!,
-          contentTypes: currentSlide.contentTypes as any,
+          contentTypes: currentSlide.contentTypes as Array<'paragraph' | 'list' | 'code' | 'table'>,
           itemCount: currentSlide.itemCount!,
           estimatedHeight: currentSlide.estimatedHeight!,
           hasOverflow: currentSlide.estimatedHeight! > maxHeight,
@@ -233,7 +233,7 @@ function parseMarkdownToSlides(markdown: string): SlidePreview[] {
     slides.push({
       slideNumber: currentSlide.slideNumber!,
       title: currentSlide.title!,
-      contentTypes: currentSlide.contentTypes as any,
+      contentTypes: currentSlide.contentTypes as Array<'paragraph' | 'list' | 'code' | 'table'>,
       itemCount: currentSlide.itemCount!,
       estimatedHeight: currentSlide.estimatedHeight!,
       hasOverflow: currentSlide.estimatedHeight! > maxHeight,
