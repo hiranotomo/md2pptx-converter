@@ -44,31 +44,203 @@ export class PptxGenerator {
 
   private renderDocument(document: MarkdownDocument): void {
     const layout = this.getLayout(this.template.defaultLayout)
-    let slide = this.pptx.addSlide()
+
+    // Group nodes into slides based on H1/H2 headings and overflow
+    const slideGroups = this.groupNodesIntoSlides(document.nodes)
+
+    for (const group of slideGroups) {
+      this.renderSlideGroup(group, layout)
+    }
+  }
+
+  /**
+   * Group nodes into logical slides
+   * Each slide starts with a heading (title) and contains content
+   */
+  private groupNodesIntoSlides(nodes: MarkdownNode[]): MarkdownNode[][] {
+    const groups: MarkdownNode[][] = []
+    let currentGroup: MarkdownNode[] = []
+    let currentHeight = 0.5
+    const maxY = 4.8
+
+    for (const node of nodes) {
+      const estimatedHeight = this.estimateNodeHeight(node)
+      const isHeading = node.type === 'heading' && (node.level === 1 || node.level === 2)
+
+      // Start new slide on H1/H2 or when content would overflow
+      if ((isHeading && currentGroup.length > 0) ||
+          (currentHeight + estimatedHeight > maxY && currentGroup.length > 0)) {
+        groups.push(currentGroup)
+        currentGroup = []
+        currentHeight = 0.5
+      }
+
+      currentGroup.push(node)
+      currentHeight += estimatedHeight
+    }
+
+    if (currentGroup.length > 0) {
+      groups.push(currentGroup)
+    }
+
+    return groups
+  }
+
+  /**
+   * Render a group of nodes as a single slide with proper placeholders
+   */
+  private renderSlideGroup(nodes: MarkdownNode[], layout: TemplateLayout): void {
+    const slide = this.pptx.addSlide()
 
     // Set background
     if (layout.background?.color) {
       slide.background = { color: layout.background.color }
     }
 
-    let yPosition = 0.5 // Start position in inches
-    const maxY = 4.8 // Maximum Y position (leave ~0.8 inches margin at bottom for safety)
+    // Find title (first H1 or H2)
+    const titleNode = nodes.find(n => n.type === 'heading' && (n.level === 1 || n.level === 2))
+    const contentNodes = titleNode ? nodes.filter(n => n !== titleNode) : nodes
 
-    for (const node of document.nodes) {
-      // Calculate required height for this node
-      const estimatedHeight = this.estimateNodeHeight(node)
+    // Add title using placeholder
+    if (titleNode) {
+      const style = layout.styles.title || layout.styles.heading1 || {}
+      const fontSize = style.fontSize || 32
 
-      // If content would overflow, create new slide
-      if (yPosition + estimatedHeight > maxY && yPosition > 0.5) {
-        slide = this.pptx.addSlide()
-        if (layout.background?.color) {
-          slide.background = { color: layout.background.color }
-        }
-        yPosition = 0.5
-      }
-
-      yPosition = this.renderNode(slide, node, layout, yPosition)
+      slide.addText(titleNode.content || '', {
+        placeholder: 'title',
+        fontSize,
+        bold: style.bold !== false,
+        color: style.color || '363636',
+        fontFace: style.fontFace || 'Arial',
+        align: style.align || 'left',
+      })
     }
+
+    // Add content using body placeholder
+    if (contentNodes.length > 0) {
+      const contentText = this.buildContentText(contentNodes, layout)
+
+      if (contentText.length > 0) {
+        slide.addText(contentText, {
+          placeholder: 'body',
+          x: 0.5,
+          y: titleNode ? 1.2 : 0.5,
+          w: 9,
+          h: 4.0,
+          valign: 'top',
+        })
+      }
+    }
+  }
+
+  /**
+   * Build structured content text array for outline support
+   */
+  private buildContentText(nodes: MarkdownNode[], layout: TemplateLayout): any[] {
+    const contentText: any[] = []
+    const bodyStyle = layout.styles.body || {}
+    const fontSize = bodyStyle.fontSize || 18
+
+    for (const node of nodes) {
+      switch (node.type) {
+        case 'heading': {
+          const level = node.level || 3
+          const headingFontSize = level === 3 ? 24 : level === 4 ? 20 : 18
+          contentText.push({
+            text: node.content || '',
+            options: {
+              fontSize: headingFontSize,
+              bold: true,
+              color: bodyStyle.color || '363636',
+              fontFace: bodyStyle.fontFace || 'Arial',
+              breakLine: true,
+            },
+          })
+          break
+        }
+
+        case 'paragraph': {
+          const formatted = parseInlineFormatting(node.content || '')
+          formatted.forEach((part, i) => {
+            contentText.push({
+              text: part.text,
+              options: {
+                fontSize,
+                bold: part.bold,
+                italic: part.italic,
+                color: bodyStyle.color || '363636',
+                fontFace: bodyStyle.fontFace || 'Arial',
+                breakLine: i === formatted.length - 1,
+              },
+            })
+          })
+          break
+        }
+
+        case 'list': {
+          const items = node.children || []
+          items.forEach((item: any) => {
+            const formatted = parseInlineFormatting(item.content || '')
+            formatted.forEach((part, i) => {
+              contentText.push({
+                text: part.text,
+                options: {
+                  bullet: i === 0,
+                  fontSize,
+                  bold: part.bold,
+                  italic: part.italic,
+                  color: bodyStyle.color || '363636',
+                  fontFace: bodyStyle.fontFace || 'Arial',
+                },
+              })
+            })
+
+            // Nested list items
+            if (item.children && item.children.length > 0) {
+              item.children.forEach((nestedItem: any) => {
+                const nestedFormatted = parseInlineFormatting(nestedItem.content || '')
+                nestedFormatted.forEach((part, i) => {
+                  contentText.push({
+                    text: part.text,
+                    options: {
+                      bullet: i === 0,
+                      fontSize: fontSize - 2,
+                      bold: part.bold,
+                      italic: part.italic,
+                      color: bodyStyle.color || '363636',
+                      fontFace: bodyStyle.fontFace || 'Arial',
+                      indentLevel: 1,
+                    },
+                  })
+                })
+              })
+            }
+          })
+          break
+        }
+
+        case 'code': {
+          contentText.push({
+            text: node.content || '',
+            options: {
+              fontSize: 14,
+              fontFace: 'Courier New',
+              color: '000000',
+              breakLine: true,
+            },
+          })
+          break
+        }
+
+        case 'table': {
+          // Tables need special handling - render on separate slide
+          this.renderTableSlide(node, layout)
+          break
+        }
+      }
+    }
+
+    return contentText
   }
 
   /**
@@ -131,286 +303,21 @@ export class PptxGenerator {
     }
   }
 
-  private renderNode(
-    slide: PptxGenJS.Slide,
-    node: MarkdownNode,
-    layout: TemplateLayout,
-    yPosition: number
-  ): number {
-    switch (node.type) {
-      case 'heading':
-        return this.renderHeading(slide, node, layout, yPosition)
+  /**
+   * Handle tables separately as they need special rendering
+   */
+  private renderTableSlide(node: MarkdownNode, layout: TemplateLayout): void {
+    const slide = this.pptx.addSlide()
 
-      case 'paragraph':
-        return this.renderParagraph(slide, node, layout, yPosition)
-
-      case 'list':
-        return this.renderList(slide, node, layout, yPosition)
-
-      case 'code':
-        return this.renderCode(slide, node, layout, yPosition)
-
-      case 'table':
-        return this.renderTable(slide, node, layout, yPosition)
-
-      default:
-        return yPosition
-    }
-  }
-
-  private renderHeading(
-    slide: PptxGenJS.Slide,
-    node: MarkdownNode,
-    layout: TemplateLayout,
-    yPosition: number
-  ): number {
-    const level = node.level || 1
-    const styleKey = level === 1 ? 'title' : (`heading${Math.min(level, 3)}` as 'heading1' | 'heading2' | 'heading3')
-    const style = layout.styles[styleKey] || layout.styles.body || {}
-    const fontSize = style.fontSize || (level === 1 ? 32 : level === 2 ? 28 : 24)
-
-    // Calculate dynamic height based on text length and language
-    const content = node.content || ''
-    const hasJapanese = /[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf]/.test(content)
-    const charsPerLine = hasJapanese ? 30 : 50
-    const estimatedLines = Math.ceil(content.length / charsPerLine)
-    const height = Math.max(0.5, estimatedLines * (fontSize / 72) * 1.2 + 0.3)
-
-    // Parse inline formatting
-    const formatted = parseInlineFormatting(node.content || '')
-    const textArray = toPptxTextArray(formatted).map((part) => ({
-      text: part.text,
-      options: {
-        ...part.options,
-        bold: part.options?.bold ?? style.bold !== false,
-        fontSize,
-        color: style.color || '363636',
-        fontFace: style.fontFace || 'Arial',
-      },
-    }))
-
-    slide.addText(textArray, {
-      x: 0.5,
-      y: yPosition,
-      w: 9,
-      h: height,
-      align: style.align,
-      valign: 'top',
-      wrap: true,
-    })
-
-    return yPosition + height + 0.3
-  }
-
-  private renderParagraph(
-    slide: PptxGenJS.Slide,
-    node: MarkdownNode,
-    layout: TemplateLayout,
-    yPosition: number
-  ): number {
-    const style = layout.styles.body || {}
-    const content = node.content || ''
-    const fontSize = style.fontSize || 14
-
-    // Calculate dynamic height based on text length and language
-    const hasJapanese = /[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf]/.test(content)
-    const charsPerLine = hasJapanese ? 40 : 70
-    const estimatedLines = Math.ceil(content.length / charsPerLine)
-    const height = Math.max(0.4, estimatedLines * (fontSize / 72) * 1.3 + 0.2)
-
-    // Parse inline formatting
-    const formatted = parseInlineFormatting(content)
-    const textArray = toPptxTextArray(formatted).map((part) => ({
-      text: part.text,
-      options: {
-        ...part.options,
-        fontSize,
-        color: style.color || '363636',
-        fontFace: style.fontFace || 'Arial',
-      },
-    }))
-
-    slide.addText(textArray, {
-      x: 0.5,
-      y: yPosition,
-      w: 9,
-      h: height,
-      align: style.align,
-      valign: 'top',
-      wrap: true,
-    })
-
-    return yPosition + height + 0.2
-  }
-
-  private renderList(
-    slide: PptxGenJS.Slide,
-    node: MarkdownNode,
-    layout: TemplateLayout,
-    yPosition: number
-  ): number {
-    const style = layout.styles.body || {}
-    const items = node.children || []
-    const fontSize = style.fontSize || 14
-    const maxY = 4.8 // Use same safety margin as main render loop
-
-    // Helper to detect Japanese text
-    const hasJapanese = (text: string) => /[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf]/.test(text)
-
-    // Calculate height for each item individually
-    const itemHeights: number[] = []
-    items.forEach((item) => {
-      const content = item.content || ''
-      const isJapanese = hasJapanese(content)
-      const charsPerLine = isJapanese ? 35 : 65
-      const estimatedLines = Math.ceil(content.length / charsPerLine)
-      const lineHeight = (fontSize / 72) * 1.3
-      itemHeights.push(Math.max(0.35, estimatedLines * lineHeight))
-    })
-
-    let currentY = yPosition
-    let currentSlide = slide
-    let currentItems: any[] = []
-    let currentHeight = 0
-
-    // Process each item and split if necessary
-    items.forEach((item, index) => {
-      const itemHeight = itemHeights[index]
-
-      // Check if adding this item would overflow
-      if (currentY + currentHeight + itemHeight > maxY && currentItems.length > 0) {
-        // Render current batch
-        this.renderListBatch(currentSlide, currentItems, style, fontSize, currentY, currentHeight)
-
-        // Create new slide
-        currentSlide = this.pptx.addSlide()
-        if (layout.background?.color) {
-          currentSlide.background = { color: layout.background.color }
-        }
-        currentY = 0.5
-        currentItems = []
-        currentHeight = 0
-      }
-
-      // Add item to current batch
-      const formatted = parseInlineFormatting(item.content || '')
-      if (formatted.length === 1 && !formatted[0].bold && !formatted[0].italic) {
-        currentItems.push({
-          text: formatted[0].text,
-          options: {
-            bullet: true,
-            fontSize,
-            color: style.color || '363636',
-            fontFace: style.fontFace || 'Arial',
-          },
-        })
-      } else {
-        formatted.forEach((part, i) => {
-          currentItems.push({
-            text: part.text,
-            options: {
-              bullet: i === 0,
-              bold: part.bold,
-              italic: part.italic,
-              fontSize,
-              color: style.color || '363636',
-              fontFace: style.fontFace || 'Arial',
-            },
-          })
-        })
-      }
-
-      // Handle nested list items
-      if (item.children && item.children.length > 0) {
-        item.children.forEach((nestedItem: any) => {
-          const nestedFormatted = parseInlineFormatting(nestedItem.content || '')
-          nestedFormatted.forEach((part, i) => {
-            currentItems.push({
-              text: part.text,
-              options: {
-                bullet: i === 0,
-                bold: part.bold,
-                italic: part.italic,
-                fontSize: fontSize - 1, // Slightly smaller for nested items
-                color: style.color || '363636',
-                fontFace: style.fontFace || 'Arial',
-                indentLevel: 1, // Indent nested items
-              },
-            })
-          })
-        })
-      }
-
-      currentHeight += itemHeight
-    })
-
-    // Render remaining items
-    if (currentItems.length > 0) {
-      this.renderListBatch(currentSlide, currentItems, style, fontSize, currentY, currentHeight)
+    if (layout.background?.color) {
+      slide.background = { color: layout.background.color }
     }
 
-    return currentY + currentHeight + 0.3
-  }
-
-  private renderListBatch(
-    slide: PptxGenJS.Slide,
-    items: any[],
-    style: any,
-    fontSize: number,
-    yPosition: number,
-    height: number
-  ): void {
-    slide.addText(items, {
-      x: 0.7,
-      y: yPosition,
-      w: 8.8,
-      h: height,
-      valign: 'top',
-      wrap: true,
-    })
-  }
-
-  private renderCode(
-    slide: PptxGenJS.Slide,
-    node: MarkdownNode,
-    layout: TemplateLayout,
-    yPosition: number
-  ): number {
-    const style = layout.styles.code || layout.styles.body || {}
-    const content = node.content || ''
-    const lines = content.split('\n').length
-    const height = Math.max(0.5, lines * 0.2)
-
-    slide.addText(content, {
-      x: 0.5,
-      y: yPosition,
-      w: 9,
-      h: height,
-      fontSize: style.fontSize || 10,
-      fontFace: style.fontFace || 'Courier New',
-      color: style.color || '000000',
-      fill: { color: 'F5F5F5' },
-      valign: 'top',
-      wrap: true,
-    })
-
-    return yPosition + height + 0.3
-  }
-
-  private renderTable(
-    slide: PptxGenJS.Slide,
-    node: MarkdownNode,
-    layout: TemplateLayout,
-    yPosition: number
-  ): number {
     const style = layout.styles.body || {}
     const fontSize = style.fontSize || 12
 
-    // Extract table data from node
-    // Expected format: node.children = [header row, ...data rows]
-    // Each row has children = [cell, cell, cell...]
     const rows = node.children || []
-    if (rows.length === 0) return yPosition
+    if (rows.length === 0) return
 
     const tableData: any[][] = []
     rows.forEach((row: any) => {
@@ -430,27 +337,12 @@ export class PptxGenerator {
       tableData.push(rowData)
     })
 
-    // Calculate table dimensions
     const numCols = Math.max(...tableData.map((row) => row.length))
     const numRows = tableData.length
-    const colWidth = 9 / numCols // Distribute width evenly
-    const rowHeight = 0.35 // Fixed row height
-    const tableHeight = numRows * rowHeight
+    const colWidth = 9 / numCols
+    const rowHeight = 0.35
 
-    // Add table to slide
-    slide.addTable(tableData, {
-      x: 0.5,
-      y: yPosition,
-      w: 9,
-      colW: Array(numCols).fill(colWidth),
-      rowH: Array(numRows).fill(rowHeight),
-      border: { pt: 1, color: 'CCCCCC' },
-      fill: { color: 'FFFFFF' },
-      // Make header row bold with background color
-      autoPage: false,
-    })
-
-    // Style header row if it exists
+    // Style header row
     if (tableData.length > 0) {
       tableData[0].forEach((cell: any) => {
         cell.options.bold = true
@@ -458,7 +350,16 @@ export class PptxGenerator {
       })
     }
 
-    return yPosition + tableHeight + 0.4
+    slide.addTable(tableData, {
+      x: 0.5,
+      y: 1.0,
+      w: 9,
+      colW: Array(numCols).fill(colWidth),
+      rowH: Array(numRows).fill(rowHeight),
+      border: { pt: 1, color: 'CCCCCC' },
+      fill: { color: 'FFFFFF' },
+      autoPage: false,
+    })
   }
 
   private getLayout(name: string): TemplateLayout {
