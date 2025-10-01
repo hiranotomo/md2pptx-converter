@@ -12,6 +12,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { PptxPreview } from '@/components/pptx-preview'
+import { MdOutlinePreview } from '@/components/md-outline-preview'
 
 const TEMPLATES = [
   { id: 'default', name: 'Default Clean', category: 'Minimal', colors: ['#FFFFFF', '#363636'] },
@@ -31,14 +33,21 @@ interface GeneratedFile {
 
 export function Converter() {
   const [file, setFile] = useState<File | null>(null)
+  const [markdownContent, setMarkdownContent] = useState<string>('')
   const [converting, setConverting] = useState(false)
   const [selectedTemplate, setSelectedTemplate] = useState('default')
   const [generatedFiles, setGeneratedFiles] = useState<GeneratedFile[]>([])
+  const [previewFile, setPreviewFile] = useState<GeneratedFile | null>(null)
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
+  const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0) {
-      setFile(acceptedFiles[0])
+      const uploadedFile = acceptedFiles[0]
+      setFile(uploadedFile)
       setGeneratedFiles([]) // Clear previous generations
+
+      // Read file content for preview
+      const text = await uploadedFile.text()
+      setMarkdownContent(text)
     }
   }, [])
 
@@ -74,16 +83,16 @@ export function Converter() {
       const template = TEMPLATES.find(t => t.id === selectedTemplate)
       const filename = file?.name.replace(/\.md$/, `.${selectedTemplate}.pptx`) || `presentation.${selectedTemplate}.pptx`
 
-      setGeneratedFiles(prev => [
-        ...prev,
-        {
-          url,
-          template: selectedTemplate,
-          templateName: template?.name || selectedTemplate,
-          filename,
-          downloaded: false,
-        }
-      ])
+      const newFile = {
+        url,
+        template: selectedTemplate,
+        templateName: template?.name || selectedTemplate,
+        filename,
+        downloaded: false,
+      }
+
+      setGeneratedFiles(prev => [...prev, newFile])
+      setPreviewFile(newFile) // Auto-preview the newly generated file
     } catch (error) {
       console.error('Conversion error:', error)
       alert('変換に失敗しました')
@@ -207,6 +216,11 @@ export function Converter() {
         </CardContent>
       </Card>
 
+      {/* Markdown Outline Preview */}
+      {file && markdownContent && (
+        <MdOutlinePreview markdown={markdownContent} />
+      )}
+
       {/* Convert/Regenerate Button */}
       {file && (
         <div className="flex justify-center">
@@ -271,19 +285,34 @@ export function Converter() {
                     </p>
                   </div>
                 </div>
-                <Button
-                  onClick={() => handleDownload(generatedFile)}
-                  variant={generatedFile.downloaded ? 'outline' : 'default'}
-                  size="sm"
-                  className="gap-2"
-                >
-                  <Download className="w-4 h-4" />
-                  {generatedFile.downloaded ? '再ダウンロード' : 'ダウンロード'}
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => setPreviewFile(generatedFile)}
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                  >
+                    プレビュー
+                  </Button>
+                  <Button
+                    onClick={() => handleDownload(generatedFile)}
+                    variant={generatedFile.downloaded ? 'outline' : 'default'}
+                    size="sm"
+                    className="gap-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    {generatedFile.downloaded ? '再ダウンロード' : 'ダウンロード'}
+                  </Button>
+                </div>
               </div>
             ))}
           </CardContent>
         </Card>
+      )}
+
+      {/* Preview Section */}
+      {previewFile && (
+        <PptxPreview fileUrl={previewFile.url} filename={previewFile.filename} />
       )}
     </div>
   )
