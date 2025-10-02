@@ -42,8 +42,13 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('Conversion error:', error)
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace')
     return NextResponse.json(
-      { error: 'Conversion failed', details: error instanceof Error ? error.message : 'Unknown error' },
+      {
+        error: 'Conversion failed',
+        details: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      },
       { status: 500 }
     )
   }

@@ -119,7 +119,9 @@ export function ModernConverter() {
       })
 
       if (!response.ok) {
-        throw new Error('Conversion failed')
+        const errorData = await response.json()
+        console.error('Server error:', errorData)
+        throw new Error(errorData.details || 'Conversion failed')
       }
 
       const arrayBuffer = await response.arrayBuffer()
