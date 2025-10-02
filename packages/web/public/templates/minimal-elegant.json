@@ -1,0 +1,64 @@
+{
+  "id": "minimal-elegant",
+  "name": "Minimal Elegant",
+  "description": "Clean minimalist design with elegant typography",
+  "category": "Minimal",
+  "author": "Md2Pptx",
+  "colors": ["#000000", "#9CA3AF", "#F3F4F6"],
+  "version": "1.0.0",
+  "slideSize": {
+    "width": 10,
+    "height": 5.625
+  },
+  "layouts": [
+    {
+      "name": "standard",
+      "background": {
+        "color": "FFFFFF"
+      },
+      "styles": {
+        "title": {
+          "fontSize": 56,
+          "fontFace": "Arial",
+          "color": "000000",
+          "bold": true,
+          "align": "center"
+        },
+        "heading1": {
+          "fontSize": 40,
+          "fontFace": "Arial",
+          "color": "000000",
+          "bold": true,
+          "align": "left"
+        },
+        "heading2": {
+          "fontSize": 32,
+          "fontFace": "Arial",
+          "color": "4B5563",
+          "bold": false,
+          "align": "left"
+        },
+        "heading3": {
+          "fontSize": 24,
+          "fontFace": "Arial",
+          "color": "6B7280",
+          "bold": false,
+          "align": "left"
+        },
+        "body": {
+          "fontSize": 18,
+          "fontFace": "Arial",
+          "color": "374151",
+          "align": "left"
+        },
+        "code": {
+          "fontSize": 14,
+          "fontFace": "Courier New",
+          "color": "1F2937",
+          "align": "left"
+        }
+      }
+    }
+  ],
+  "defaultLayout": "standard"
+}

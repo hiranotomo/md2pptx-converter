@@ -1,0 +1,64 @@
+{
+  "id": "corporate-blue",
+  "name": "Corporate Blue",
+  "description": "Professional business template with blue accent colors",
+  "category": "Corporate",
+  "author": "Md2Pptx",
+  "colors": ["#1E3A8A", "#3B82F6", "#E0E7FF", "#1F2937"],
+  "version": "1.0.0",
+  "slideSize": {
+    "width": 10,
+    "height": 5.625
+  },
+  "layouts": [
+    {
+      "name": "standard",
+      "background": {
+        "color": "FFFFFF"
+      },
+      "styles": {
+        "title": {
+          "fontSize": 48,
+          "fontFace": "Arial",
+          "color": "1E3A8A",
+          "bold": true,
+          "align": "left"
+        },
+        "heading1": {
+          "fontSize": 36,
+          "fontFace": "Arial",
+          "color": "1E3A8A",
+          "bold": true,
+          "align": "left"
+        },
+        "heading2": {
+          "fontSize": 28,
+          "fontFace": "Arial",
+          "color": "3B82F6",
+          "bold": true,
+          "align": "left"
+        },
+        "heading3": {
+          "fontSize": 24,
+          "fontFace": "Arial",
+          "color": "3B82F6",
+          "bold": false,
+          "align": "left"
+        },
+        "body": {
+          "fontSize": 16,
+          "fontFace": "Arial",
+          "color": "1F2937",
+          "align": "left"
+        },
+        "code": {
+          "fontSize": 12,
+          "fontFace": "Courier New",
+          "color": "1F2937",
+          "align": "left"
+        }
+      }
+    }
+  ],
+  "defaultLayout": "standard"
+}

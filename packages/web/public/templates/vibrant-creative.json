@@ -1,0 +1,64 @@
+{
+  "id": "vibrant-creative",
+  "name": "Vibrant Creative",
+  "description": "Bold and colorful design for creative presentations",
+  "category": "Creative",
+  "author": "Md2Pptx",
+  "colors": ["#EF4444", "#F59E0B", "#10B981", "#3B82F6", "#8B5CF6"],
+  "version": "1.0.0",
+  "slideSize": {
+    "width": 10,
+    "height": 5.625
+  },
+  "layouts": [
+    {
+      "name": "standard",
+      "background": {
+        "color": "FFFBEB"
+      },
+      "styles": {
+        "title": {
+          "fontSize": 54,
+          "fontFace": "Arial",
+          "color": "EF4444",
+          "bold": true,
+          "align": "center"
+        },
+        "heading1": {
+          "fontSize": 42,
+          "fontFace": "Arial",
+          "color": "F59E0B",
+          "bold": true,
+          "align": "left"
+        },
+        "heading2": {
+          "fontSize": 32,
+          "fontFace": "Arial",
+          "color": "10B981",
+          "bold": true,
+          "align": "left"
+        },
+        "heading3": {
+          "fontSize": 26,
+          "fontFace": "Arial",
+          "color": "3B82F6",
+          "bold": false,
+          "align": "left"
+        },
+        "body": {
+          "fontSize": 17,
+          "fontFace": "Arial",
+          "color": "1F2937",
+          "align": "left"
+        },
+        "code": {
+          "fontSize": 13,
+          "fontFace": "Courier New",
+          "color": "374151",
+          "align": "left"
+        }
+      }
+    }
+  ],
+  "defaultLayout": "standard"
+}

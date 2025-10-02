@@ -1,19 +1,15 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  webpack: (config) => {
-    // Enable JSON imports
-    config.module.rules.push({
-      test: /\.json$/,
-      type: 'json',
-    });
-
-    return config;
-  },
-  // Ensure core package templates are traced
+  // Ensure core package templates are traced for serverless functions
   outputFileTracingIncludes: {
-    '/api/convert': ['../../core/templates/**/*'],
+    '/api/**/*': [
+      '../../core/templates/**/*.json',
+      '../../core/dist/**/*',
+    ],
   },
+  // Set explicit output file tracing root for monorepo
+  outputFileTracingRoot: require('path').join(__dirname, '../../'),
 };
 
 export default nextConfig;
