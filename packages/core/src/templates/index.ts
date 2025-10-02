@@ -1,12 +1,11 @@
-import { readFileSync } from 'fs'
-import { join, dirname } from 'path'
-import { fileURLToPath } from 'url'
 import type { Template } from '../types/index.js'
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
-
-export const TEMPLATE_DIR = join(__dirname, '../../templates')
+// Import templates directly
+import defaultTemplate from '../../templates/default.json' assert { type: 'json' }
+import corporateBlueTemplate from '../../templates/corporate-blue.json' assert { type: 'json' }
+import modernGradientTemplate from '../../templates/modern-gradient.json' assert { type: 'json' }
+import minimalElegantTemplate from '../../templates/minimal-elegant.json' assert { type: 'json' }
+import vibrantCreativeTemplate from '../../templates/vibrant-creative.json' assert { type: 'json' }
 
 export const AVAILABLE_TEMPLATES = [
   'default',
@@ -18,13 +17,19 @@ export const AVAILABLE_TEMPLATES = [
 
 export type TemplateId = typeof AVAILABLE_TEMPLATES[number]
 
+const TEMPLATE_MAP: Record<TemplateId, Template> = {
+  'default': defaultTemplate as Template,
+  'corporate-blue': corporateBlueTemplate as Template,
+  'modern-gradient': modernGradientTemplate as Template,
+  'minimal-elegant': minimalElegantTemplate as Template,
+  'vibrant-creative': vibrantCreativeTemplate as Template,
+}
+
 /**
  * Load a template by ID
  */
 export function loadTemplate(id: TemplateId): Template {
-  const templatePath = join(TEMPLATE_DIR, `${id}.json`)
-  const templateData = readFileSync(templatePath, 'utf-8')
-  return JSON.parse(templateData) as Template
+  return TEMPLATE_MAP[id]
 }
 
 /**
